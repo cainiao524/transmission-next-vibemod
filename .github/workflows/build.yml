@@ -3,7 +3,7 @@ name: 验证与构建
 on:
   push:
     branches: [main]
-    tags: ["V*"]
+    tags: ["V*", "v*"]
   pull_request:
     branches: [main]
 
@@ -41,11 +41,11 @@ jobs:
         run: pnpm build
 
       - name: 打包
-        if: startsWith(github.ref, 'refs/tags/V')
+        if: startsWith(github.ref, 'refs/tags/V') || startsWith(github.ref, 'refs/tags/v')
         run: cd dist && zip -r ../tranemission-next-vibemod.zip .
 
       - name: 上传发行包
-        if: startsWith(github.ref, 'refs/tags/V')
+        if: startsWith(github.ref, 'refs/tags/V') || startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: tranemission-next-vibemod.zip
