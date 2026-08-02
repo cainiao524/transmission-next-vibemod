@@ -1,0 +1,278 @@
+/**
+ * 界面与 Transmission RPC 适配层共用的领域类型。
+ *
+ * The property names intentionally stay stable so the view layer remains
+ * 这些类型与 Transmission 的原始传输格式解耦。
+ */
+
+export enum TorrentStatus {
+  STOPPED = 0,
+  CHECK_WAIT = 1,
+  CHECK = 2,
+  DOWNLOAD_WAIT = 3,
+  DOWNLOAD = 4,
+  SEED_WAIT = 5,
+  SEED = 6,
+}
+
+export interface Torrent {
+  id: string
+  name: string
+  status: TorrentStatus
+  hashString: string
+  totalSize: number
+  percentDone: number
+  rateDownload: number
+  rateUpload: number
+  eta: number
+  addedDate: number
+  doneDate: number
+  editDate?: number
+  downloadDir: string
+  error: number
+  errorString: string
+  uploadedEver: number
+  downloadedEver: number
+  uploadRatio: number
+  labels?: string[]
+  queuePosition: number
+  isFinished: boolean
+  isPrivate: boolean
+  isStalled: boolean
+  trackers?: Tracker[]
+  trackerStats?: TrackerStat[]
+  files?: TorrentFile[]
+  peers?: Peer[]
+  peersConnected: number
+  peersSendingToUs: number
+  peersGettingFromUs: number
+  comment?: string
+  creator?: string
+  dateCreated?: number
+  bandwidthPriority?: number
+  downloadLimit?: number
+  downloadLimited?: boolean
+  uploadLimit?: number
+  uploadLimited?: boolean
+  honorsSessionLimits?: boolean
+  seedRatioLimit?: number
+  seedRatioMode?: number
+  seedingTimeLimit?: number
+  seedingTimeMode?: number
+  inactiveSeedingTimeLimit?: number
+  inactiveSeedingTimeMode?: number
+  shareLimitAction?: "Default" | "Stop" | "Remove" | "RemoveWithContent" | "EnableSuperSeeding"
+  seedIdleLimit?: number
+  seedIdleMode?: number
+  trackerList?: string
+  category?: string
+  forceStart?: boolean
+  sequentialDownload?: boolean
+  firstLastPiecePriority?: boolean
+  superSeeding?: boolean
+  autoManagement?: boolean
+  downloadPath?: string
+  timeElapsed?: number
+  seedingTime?: number
+  connectionsLimit?: number
+  downloadedSession?: number
+  uploadedSession?: number
+  averageDownloadSpeed?: number
+  averageUploadSpeed?: number
+  wastedSize?: number
+  seedsTotal?: number
+  peersTotal?: number
+  popularity?: number
+  availability?: number
+  nextAnnounce?: number
+  piecesCount?: number
+  piecesHave?: number
+  pieceSize?: number
+  lastSeenComplete?: number
+}
+
+export type TorrentId = string
+export type TorrentField = keyof Torrent
+
+export interface TorrentGetResponse {
+  torrents: Torrent[]
+}
+
+export interface TorrentAddArgs {
+  filename?: string
+  metainfo?: string
+  "download-dir"?: string
+  paused?: boolean
+  category?: string
+  tags?: string[]
+  autoTMM?: boolean
+  addToTopOfQueue?: boolean
+  skipChecking?: boolean
+  sequentialDownload?: boolean
+  firstLastPiecePrio?: boolean
+  forced?: boolean
+  contentLayout?: "Original" | "Subfolder" | "NoSubfolder"
+  rename?: string
+  useDownloadPath?: boolean
+  downloadPath?: string
+  upLimit?: number
+  dlLimit?: number
+  ratioLimit?: number
+  seedingTimeLimit?: number
+  inactiveSeedingTimeLimit?: number
+  shareLimitAction?: "Default" | "Stop" | "Remove" | "RemoveWithContent" | "EnableSuperSeeding"
+  stopCondition?: "None" | "MetadataReceived" | "FilesChecked"
+  sslCertificate?: string
+  sslPrivateKey?: string
+  sslDhParams?: string
+}
+
+export interface TorrentAddResponse {
+  "torrent-added"?: Torrent
+  "torrent-duplicate"?: Torrent
+  success_count?: number
+  failure_count?: number
+  pending_count?: number
+  added_torrent_ids?: string[]
+}
+
+export interface TorrentSetArgs {
+  bandwidthPriority?: number
+  downloadLimit?: number
+  downloadLimited?: boolean
+  uploadLimit?: number
+  uploadLimited?: boolean
+  honorsSessionLimits?: boolean
+  seedRatioLimit?: number
+  seedRatioMode?: number
+  seedingTimeLimit?: number
+  seedingTimeMode?: number
+  inactiveSeedingTimeLimit?: number
+  inactiveSeedingTimeMode?: number
+  shareLimitAction?: "Default" | "Stop" | "Remove" | "RemoveWithContent" | "EnableSuperSeeding"
+  seedIdleLimit?: number
+  seedIdleMode?: number
+  trackerList?: string
+  labels?: string[]
+}
+
+export interface FreeSpaceResponse {
+  path: string
+  "size-bytes": number
+  total_size: number
+}
+
+export interface Tracker {
+  id: number
+  tier: number
+  announce: string
+  scrape: string
+  sitename: string
+}
+
+export interface TrackerStat {
+  announce: string
+  host: string
+  seederCount: number
+  leecherCount: number
+  lastAnnounceSucceeded: boolean
+  lastAnnounceResult: string
+  isBackup: boolean
+}
+
+export interface Peer {
+  address: string
+  clientName: string
+  rateToClient: number
+  rateToPeer: number
+  progress: number
+  isEncrypted: boolean
+}
+
+export interface TorrentFile {
+  index: number
+  name: string
+  length: number
+  bytesCompleted: number
+  priority: TorrentFilePriority
+}
+
+export type TorrentFilePriority = 0 | 1 | 6 | 7
+
+export type ApplicationPreferenceValue =
+  | string
+  | number
+  | boolean
+  | null
+  | ApplicationPreferenceValue[]
+  | { [key: string]: ApplicationPreferenceValue }
+
+export type ApplicationPreferences = Record<string, ApplicationPreferenceValue>
+
+export interface Session {
+  "alt-speed-down": number
+  "alt-speed-enabled": boolean
+  "alt-speed-up": number
+  "alt-speed-time-begin": number
+  "alt-speed-time-enabled": boolean
+  "alt-speed-time-end": number
+  "alt-speed-time-day": number
+  "download-dir": string
+  "download-queue-enabled": boolean
+  "download-queue-size": number
+  "encryption": "required" | "preferred" | "tolerated"
+  "peer-limit-global": number
+  "peer-limit-per-torrent": number
+  "peer-port": number
+  "peer-port-random-on-start": boolean
+  "port-forwarding-enabled": boolean
+  "rename-partial-files": boolean
+  "rpc-version": number
+  "rpc-version-semver": string
+  "seed-queue-enabled": boolean
+  "seed-queue-size": number
+  "speed-limit-down": number
+  "speed-limit-down-enabled": boolean
+  "speed-limit-up": number
+  "speed-limit-up-enabled": boolean
+  "start-added-torrents": boolean
+  "trash-original-torrent-files": boolean
+  "units": {
+    "speed-units": string[]
+    "speed-bytes": number
+    "size-units": string[]
+    "size-bytes": number
+  }
+  "version": string
+  "dht-enabled": boolean
+  "pex-enabled": boolean
+  "lpd-enabled": boolean
+  "utp-enabled": boolean
+  "blocklist-enabled": boolean
+  "blocklist-url": string
+  "blocklist-size": number
+  "incomplete-dir": string
+  "incomplete-dir-enabled": boolean
+}
+
+export interface SessionStats {
+  activeTorrentCount: number
+  downloadSpeed: number
+  pausedTorrentCount: number
+  torrentCount: number
+  uploadSpeed: number
+  "cumulative-stats": {
+    downloadedBytes: number
+    uploadedBytes: number
+    filesAdded: number
+    sessionCount: number
+    secondsActive: number
+  }
+  "current-stats": {
+    downloadedBytes: number
+    uploadedBytes: number
+    filesAdded: number
+    sessionCount: number
+    secondsActive: number
+  }
+}

@@ -1,0 +1,51 @@
+name: 验证与构建
+
+on:
+  push:
+    branches: [main]
+    tags: ["V*"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v5
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 10
+
+      - name: 配置 Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 类型检查
+        run: pnpm typecheck
+
+      - name: 运行测试
+        run: pnpm test
+
+      - name: 构建
+        run: pnpm build
+
+      - name: 打包
+        if: startsWith(github.ref, 'refs/tags/V')
+        run: cd dist && zip -r ../tranemission-next-vibemod.zip .
+
+      - name: 上传发行包
+        if: startsWith(github.ref, 'refs/tags/V')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: tranemission-next-vibemod.zip
