@@ -15,6 +15,7 @@ import type {
   Tracker,
   TrackerStat,
 } from "./rpc-types"
+import { isPrivateNetworkHost } from "./network"
 
 type JsonRecord = Record<string, unknown>
 
@@ -24,13 +25,18 @@ interface RpcEnvelope<T> {
   tag?: number
 }
 
-const AUTH_STORAGE_KEY = "transmission_basic_auth"
+const LAN_AUTH_STORAGE_KEY = "transmission_lan_auth"
+const LEGACY_AUTH_STORAGE_KEY = "transmission_basic_auth"
 export const TRANSMISSION_AUTH_LOGOUT_EVENT = "transmission-auth-logout"
 
 function clearLegacyStoredAuth(): void {
   if (typeof window === "undefined") return
-  localStorage.removeItem(AUTH_STORAGE_KEY)
-  sessionStorage.removeItem(AUTH_STORAGE_KEY)
+  localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY)
+  sessionStorage.removeItem(LEGACY_AUTH_STORAGE_KEY)
+}
+
+function isPrivateNetworkContext(): boolean {
+  return typeof window !== "undefined" && isPrivateNetworkHost(window.location.hostname)
 }
 
 const CORE_FIELDS = [
@@ -214,9 +220,15 @@ class TransmissionRPC {
   private baseUrl = import.meta.env.VITE_TRANSMISSION_RPC_URL || "/transmission/rpc"
   private sessionId: string | null = null
   private authHeader: string | null = null
+  private readonly privateNetwork = isPrivateNetworkContext()
 
   constructor() {
     clearLegacyStoredAuth()
+    if (this.privateNetwork) {
+      this.authHeader = localStorage.getItem(LAN_AUTH_STORAGE_KEY)
+    } else if (typeof window !== "undefined") {
+      localStorage.removeItem(LAN_AUTH_STORAGE_KEY)
+    }
   }
 
   private async request<T = JsonRecord>(method: string, args?: JsonRecord, retry = true): Promise<T> {
@@ -254,6 +266,7 @@ class TransmissionRPC {
     this.sessionId = null
     try {
       await this.getSession()
+      if (this.privateNetwork) localStorage.setItem(LAN_AUTH_STORAGE_KEY, this.authHeader)
     } catch (error) {
       this.authHeader = previous
       throw error
@@ -264,6 +277,7 @@ class TransmissionRPC {
     this.authHeader = null
     this.sessionId = null
     clearLegacyStoredAuth()
+    if (!this.privateNetwork && typeof window !== "undefined") localStorage.removeItem(LAN_AUTH_STORAGE_KEY)
     if (typeof window !== "undefined") window.dispatchEvent(new Event(TRANSMISSION_AUTH_LOGOUT_EVENT))
   }
 

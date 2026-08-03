@@ -30,7 +30,7 @@ describe("Transmission RPC 适配层", () => {
     expect(secondRequest.headers).toMatchObject({ "X-Transmission-Session-Id": "rpc-session" })
   })
 
-  test("登录使用基本认证但不在 WebUI 中保存凭据", async () => {
+  test("内网登录后保存认证信息以便下次自动登录", async () => {
     vi.mocked(fetch).mockResolvedValue(success({ version: "4.0.6" }))
     const { rpc } = await import("./rpc-client")
 
@@ -39,7 +39,29 @@ describe("Transmission RPC 适配层", () => {
     const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit
     expect(request.headers).toMatchObject({ Authorization: `Basic ${btoa("user:pass")}` })
     expect(localStorage.getItem("transmission_basic_auth")).toBeNull()
-    expect(sessionStorage.getItem("transmission_basic_auth")).toBeNull()
+    expect(localStorage.getItem("transmission_lan_auth")).toBe(`Basic ${btoa("user:pass")}`)
+  })
+
+  test("重新打开页面时使用内网保存的认证信息", async () => {
+    const authorization = `Basic ${btoa("user:pass")}`
+    localStorage.setItem("transmission_lan_auth", authorization)
+    vi.mocked(fetch).mockResolvedValue(success({ version: "4.0.6" }))
+
+    const { rpc } = await import("./rpc-client")
+    await expect(rpc.checkAuthentication()).resolves.toBe(true)
+
+    const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit
+    expect(request.headers).toMatchObject({ Authorization: authorization })
+  })
+
+  test("内网主动退出后保留下一次打开所需的认证信息", async () => {
+    vi.mocked(fetch).mockResolvedValue(success({ version: "4.0.6" }))
+    const { rpc } = await import("./rpc-client")
+
+    await rpc.login("user", "pass")
+    await rpc.logout()
+
+    expect(localStorage.getItem("transmission_lan_auth")).toBe(`Basic ${btoa("user:pass")}`)
   })
 
   test("加载时清理旧版本遗留的 WebUI 凭据", async () => {
