@@ -10,6 +10,7 @@ import type {
   TorrentFilePriority,
   TorrentGetResponse,
   TorrentId,
+  TorrentPieceState,
   TorrentSetArgs,
   Tracker,
   TrackerStat,
@@ -21,6 +22,37 @@ interface RpcEnvelope<T> {
   result: string
   arguments: T
   tag?: number
+}
+
+const AUTH_STORAGE_KEY = "transmission_basic_auth"
+export const TRANSMISSION_AUTH_LOGOUT_EVENT = "transmission-auth-logout"
+
+export function isLocalNetworkHostname(hostname: string): boolean {
+  const normalized = hostname.trim().toLowerCase().replace(/^\[|\]$/g, "")
+  if (!normalized) return false
+  if (normalized === "localhost" || normalized.endsWith(".localhost") || normalized.endsWith(".local")) return true
+  if (normalized === "::1") return true
+  if (normalized.includes(":") && (normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe80:"))) return true
+
+  const octets = normalized.split(".").map(Number)
+  if (octets.length !== 4 || octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) return false
+  return octets[0] === 10
+    || octets[0] === 127
+    || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31)
+    || (octets[0] === 192 && octets[1] === 168)
+    || (octets[0] === 169 && octets[1] === 254)
+}
+
+export function credentialStorageFor(hostname: string, rememberPassword: boolean): "local" | "session" {
+  return isLocalNetworkHostname(hostname) || rememberPassword ? "local" : "session"
+}
+
+function currentHostname(): string {
+  return typeof window === "undefined" ? "" : window.location.hostname
+}
+
+function storedAuthHeader(): string | null {
+  return localStorage.getItem(AUTH_STORAGE_KEY) ?? sessionStorage.getItem(AUTH_STORAGE_KEY)
 }
 
 const CORE_FIELDS = [
@@ -96,6 +128,7 @@ function mapTrackerStat(raw: JsonRecord): TrackerStat {
 function mapTorrent(raw: JsonRecord): Torrent {
   const files = Array.isArray(raw.files) ? raw.files as JsonRecord[] : []
   const fileStats = Array.isArray(raw.fileStats) ? raw.fileStats as JsonRecord[] : []
+  const peers = Array.isArray(raw.peers) ? raw.peers as JsonRecord[] : []
   const pieceSize = numberValue(raw, "pieceSize")
   const haveBytes = numberValue(raw, "haveValid") + numberValue(raw, "haveUnchecked")
   const left = numberValue(raw, "leftUntilDone")
@@ -141,7 +174,16 @@ function mapTorrent(raw: JsonRecord): Torrent {
         priority: (!wanted ? 0 : priority > 0 ? 6 : 1) as TorrentFilePriority,
       }
     }),
-    peers: Array.isArray(raw.peers) ? raw.peers as Torrent["peers"] : [],
+    peers: peers.map((peer) => ({
+      address: stringValue(peer, "address"),
+      clientName: stringValue(peer, "clientName"),
+      country: stringValue(peer, "country") || undefined,
+      countryCode: stringValue(peer, "countryCode", stringValue(peer, "country_code")) || undefined,
+      rateToClient: numberValue(peer, "rateToClient"),
+      rateToPeer: numberValue(peer, "rateToPeer"),
+      progress: numberValue(peer, "progress"),
+      isEncrypted: booleanValue(peer, "isEncrypted"),
+    })),
     peersConnected: numberValue(raw, "peersConnected"),
     peersSendingToUs: numberValue(raw, "peersSendingToUs"),
     peersGettingFromUs: numberValue(raw, "peersGettingFromUs"),
@@ -193,7 +235,7 @@ function mapTorrent(raw: JsonRecord): Torrent {
 class TransmissionRPC {
   private baseUrl = import.meta.env.VITE_TRANSMISSION_RPC_URL || "/transmission/rpc"
   private sessionId: string | null = null
-  private authHeader: string | null = sessionStorage.getItem("transmission_basic_auth")
+  private authHeader: string | null = storedAuthHeader()
 
   private async request<T = JsonRecord>(method: string, args?: JsonRecord, retry = true): Promise<T> {
     const headers: Record<string, string> = { "Content-Type": "application/json" }
@@ -224,13 +266,21 @@ class TransmissionRPC {
     }
   }
 
-  async login(username: string, password: string): Promise<void> {
+  isLocalNetworkAccess(): boolean {
+    return isLocalNetworkHostname(currentHostname())
+  }
+
+  async login(username: string, password: string, rememberPassword = false): Promise<void> {
     const previous = this.authHeader
     this.authHeader = `Basic ${btoa(`${username}:${password}`)}`
     this.sessionId = null
     try {
       await this.getSession()
-      sessionStorage.setItem("transmission_basic_auth", this.authHeader)
+      const storage = credentialStorageFor(currentHostname(), rememberPassword)
+      localStorage.removeItem(AUTH_STORAGE_KEY)
+      sessionStorage.removeItem(AUTH_STORAGE_KEY)
+      if (storage === "local") localStorage.setItem(AUTH_STORAGE_KEY, this.authHeader)
+      else sessionStorage.setItem(AUTH_STORAGE_KEY, this.authHeader)
     } catch (error) {
       this.authHeader = previous
       throw error
@@ -240,7 +290,9 @@ class TransmissionRPC {
   async logout(): Promise<void> {
     this.authHeader = null
     this.sessionId = null
-    sessionStorage.removeItem("transmission_basic_auth")
+    sessionStorage.removeItem(AUTH_STORAGE_KEY)
+    if (!this.isLocalNetworkAccess()) localStorage.removeItem(AUTH_STORAGE_KEY)
+    if (typeof window !== "undefined") window.dispatchEvent(new Event(TRANSMISSION_AUTH_LOGOUT_EVENT))
   }
 
   async getTorrents(fields: string[], ids?: TorrentId[]): Promise<TorrentGetResponse> {
@@ -259,6 +311,26 @@ class TransmissionRPC {
     if (ids?.length) args.ids = ids
     const response = await this.request<{ torrents: JsonRecord[] }>("torrent-get", args)
     return { torrents: response.torrents.map(mapTorrent) }
+  }
+
+  async getTorrentPieceStates(id: TorrentId): Promise<TorrentPieceState[]> {
+    const response = await this.request<{ torrents: JsonRecord[] }>("torrent-get", {
+      ids: [id],
+      fields: ["pieceCount", "pieces"],
+    })
+    const torrent = response.torrents[0]
+    if (!torrent) return []
+
+    const pieceCount = numberValue(torrent, "pieceCount")
+    const encodedPieces = stringValue(torrent, "pieces")
+    if (!pieceCount || !encodedPieces) return []
+
+    const pieces = atob(encodedPieces)
+    return Array.from({ length: pieceCount }, (_, index): TorrentPieceState => {
+      const byte = pieces.charCodeAt(Math.floor(index / 8)) || 0
+      const mask = 1 << (7 - index % 8)
+      return (byte & mask) !== 0 ? 2 : 0
+    })
   }
 
   async getSession(): Promise<Session> {

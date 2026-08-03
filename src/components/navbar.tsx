@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Link } from "react-router-dom"
-import { Search, Bell, ArrowUpCircle } from "lucide-react"
+import { Search, Bell, ArrowUpCircle, LogOut } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,6 +21,7 @@ import { useI18n } from "@/lib/i18n-context"
 import { useSearch } from "@/lib/search-context"
 import { APP_CONFIG } from "@/lib/config"
 import { formatDate } from "@/lib/formatters"
+import { rpc } from "@/lib/rpc-client"
 
 export function Navbar() {
   const { t, locale } = useI18n()
@@ -94,6 +95,16 @@ export function Navbar() {
       <div className="flex items-center gap-3">
         <LanguageSwitcher />
         <ThemeSwitcher />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 rounded-full text-muted-foreground hover:bg-red-500/10 hover:text-red-500"
+          onClick={() => void rpc.logout()}
+          title="退出登录"
+          aria-label="退出登录"
+        >
+          <LogOut className="h-5 w-5" />
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button 

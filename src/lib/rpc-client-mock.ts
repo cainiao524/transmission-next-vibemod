@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { ApplicationPreferences, Session, TorrentFilePriority } from "./rpc-types";
+import type { ApplicationPreferences, Session, TorrentFilePriority, TorrentPieceState } from "./rpc-types";
 import { MOCK_SESSION, MOCK_STATS, MOCK_TORRENTS } from "./mock-data";
 
 const MOCK_APPLICATION_PREFERENCES: ApplicationPreferences = {
@@ -119,6 +119,13 @@ class QBittorrentRPCMock {
 
   async getTorrents(_fields: string[], _ids?: string[]) {
     return this.request("torrent-get", { ids: _ids });
+  }
+
+  async getTorrentPieceStates(id: string): Promise<TorrentPieceState[]> {
+    const torrent = MOCK_TORRENTS.find((item) => item.id === id || item.hashString === id);
+    const pieceCount = Math.min(2048, Math.max(256, torrent?.piecesCount ?? 768));
+    const completed = Math.round(pieceCount * (torrent?.percentDone ?? 0));
+    return Array.from({ length: pieceCount }, (_, index) => index < completed ? 2 : 0);
   }
 
   async getSession() {
