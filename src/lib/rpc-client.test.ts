@@ -86,4 +86,47 @@ describe("Transmission RPC 适配层", () => {
     const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit
     expect(JSON.parse(request.body as string)).toMatchObject({ method: "queue-move-top", arguments: { ids: ["9"] } })
   })
+
+  test("读取并解码 Transmission 文件块位图", async () => {
+    const pieces = btoa(String.fromCharCode(0b10110000, 0b10000000))
+    vi.mocked(fetch).mockResolvedValue(success({
+      torrents: [{ pieceCount: 10, pieces }],
+    }))
+    const { rpc } = await import("./rpc-client")
+
+    await expect(rpc.getTorrentPieceStates("abc")).resolves.toEqual([2, 0, 2, 2, 0, 0, 0, 0, 2, 0])
+
+    const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit
+    expect(JSON.parse(request.body as string)).toMatchObject({
+      method: "torrent-get",
+      arguments: { ids: ["abc"], fields: ["pieceCount", "pieces"] },
+    })
+  })
+
+  test("保留 Transmission 扩展返回的用户国家和地区信息", async () => {
+    vi.mocked(fetch).mockResolvedValue(success({
+      torrents: [{
+        id: 9,
+        hashString: "abc",
+        peers: [{
+          address: "203.0.113.8",
+          clientName: "Transmission 4.0.6",
+          country: "Japan",
+          countryCode: "JP",
+          rateToClient: 1024,
+          rateToPeer: 512,
+          progress: 0.75,
+          isEncrypted: true,
+        }],
+      }],
+    }))
+    const { rpc } = await import("./rpc-client")
+
+    const result = await rpc.getTorrents(["peers"], ["abc"])
+
+    expect(result.torrents[0].peers?.[0]).toMatchObject({
+      country: "Japan",
+      countryCode: "JP",
+    })
+  })
 })

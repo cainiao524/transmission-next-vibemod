@@ -10,6 +10,7 @@ import type {
   TorrentFilePriority,
   TorrentGetResponse,
   TorrentId,
+  TorrentPieceState,
   TorrentSetArgs,
   Tracker,
   TrackerStat,
@@ -96,6 +97,7 @@ function mapTrackerStat(raw: JsonRecord): TrackerStat {
 function mapTorrent(raw: JsonRecord): Torrent {
   const files = Array.isArray(raw.files) ? raw.files as JsonRecord[] : []
   const fileStats = Array.isArray(raw.fileStats) ? raw.fileStats as JsonRecord[] : []
+  const peers = Array.isArray(raw.peers) ? raw.peers as JsonRecord[] : []
   const pieceSize = numberValue(raw, "pieceSize")
   const haveBytes = numberValue(raw, "haveValid") + numberValue(raw, "haveUnchecked")
   const left = numberValue(raw, "leftUntilDone")
@@ -141,7 +143,16 @@ function mapTorrent(raw: JsonRecord): Torrent {
         priority: (!wanted ? 0 : priority > 0 ? 6 : 1) as TorrentFilePriority,
       }
     }),
-    peers: Array.isArray(raw.peers) ? raw.peers as Torrent["peers"] : [],
+    peers: peers.map((peer) => ({
+      address: stringValue(peer, "address"),
+      clientName: stringValue(peer, "clientName"),
+      country: stringValue(peer, "country") || undefined,
+      countryCode: stringValue(peer, "countryCode", stringValue(peer, "country_code")) || undefined,
+      rateToClient: numberValue(peer, "rateToClient"),
+      rateToPeer: numberValue(peer, "rateToPeer"),
+      progress: numberValue(peer, "progress"),
+      isEncrypted: booleanValue(peer, "isEncrypted"),
+    })),
     peersConnected: numberValue(raw, "peersConnected"),
     peersSendingToUs: numberValue(raw, "peersSendingToUs"),
     peersGettingFromUs: numberValue(raw, "peersGettingFromUs"),
@@ -259,6 +270,26 @@ class TransmissionRPC {
     if (ids?.length) args.ids = ids
     const response = await this.request<{ torrents: JsonRecord[] }>("torrent-get", args)
     return { torrents: response.torrents.map(mapTorrent) }
+  }
+
+  async getTorrentPieceStates(id: TorrentId): Promise<TorrentPieceState[]> {
+    const response = await this.request<{ torrents: JsonRecord[] }>("torrent-get", {
+      ids: [id],
+      fields: ["pieceCount", "pieces"],
+    })
+    const torrent = response.torrents[0]
+    if (!torrent) return []
+
+    const pieceCount = numberValue(torrent, "pieceCount")
+    const encodedPieces = stringValue(torrent, "pieces")
+    if (!pieceCount || !encodedPieces) return []
+
+    const pieces = atob(encodedPieces)
+    return Array.from({ length: pieceCount }, (_, index): TorrentPieceState => {
+      const byte = pieces.charCodeAt(Math.floor(index / 8)) || 0
+      const mask = 1 << (7 - index % 8)
+      return (byte & mask) !== 0 ? 2 : 0
+    })
   }
 
   async getSession(): Promise<Session> {
