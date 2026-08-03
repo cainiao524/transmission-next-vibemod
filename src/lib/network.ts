@@ -14,14 +14,3 @@ export function isPrivateNetworkHost(hostname: string): boolean {
 
   return /^(?:fc|fd|fe8|fe9|fea|feb)[0-9a-f:]*$/.test(host)
 }
-
-export function isBrowserAutofilled(input: HTMLInputElement): boolean {
-  for (const selector of [":autofill", ":-webkit-autofill"]) {
-    try {
-      if (input.matches(selector)) return true
-    } catch {
-      // 浏览器不认识某个自动填充伪类时继续检查下一个。
-    }
-  }
-  return false
-}
