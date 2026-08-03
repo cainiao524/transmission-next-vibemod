@@ -8,6 +8,7 @@ const success = (args: object = {}) => new Response(JSON.stringify({ result: "su
 describe("Transmission RPC 适配层", () => {
   beforeEach(() => {
     vi.resetModules()
+    localStorage.clear()
     sessionStorage.clear()
     vi.stubGlobal("fetch", vi.fn())
   })
@@ -29,7 +30,7 @@ describe("Transmission RPC 适配层", () => {
     expect(secondRequest.headers).toMatchObject({ "X-Transmission-Session-Id": "rpc-session" })
   })
 
-  test("登录使用基本认证并保存凭据", async () => {
+  test("本地网络登录使用基本认证并持久保存凭据", async () => {
     vi.mocked(fetch).mockResolvedValue(success({ version: "4.0.6" }))
     const { rpc } = await import("./rpc-client")
 
@@ -37,7 +38,32 @@ describe("Transmission RPC 适配层", () => {
 
     const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit
     expect(request.headers).toMatchObject({ Authorization: `Basic ${btoa("user:pass")}` })
-    expect(sessionStorage.getItem("transmission_basic_auth")).toBe(`Basic ${btoa("user:pass")}`)
+    expect(localStorage.getItem("transmission_basic_auth")).toBe(`Basic ${btoa("user:pass")}`)
+    expect(sessionStorage.getItem("transmission_basic_auth")).toBeNull()
+  })
+
+  test("本地网络退出后保留持久凭据", async () => {
+    vi.mocked(fetch).mockResolvedValue(success({ version: "4.0.6" }))
+    const { rpc } = await import("./rpc-client")
+
+    await rpc.login("user", "pass")
+    await rpc.logout()
+
+    expect(localStorage.getItem("transmission_basic_auth")).toBe(`Basic ${btoa("user:pass")}`)
+    expect(sessionStorage.getItem("transmission_basic_auth")).toBeNull()
+  })
+
+  test("根据访问地址与记住密码选项选择凭据存储方式", async () => {
+    const { credentialStorageFor, isLocalNetworkHostname } = await import("./rpc-client")
+
+    expect(isLocalNetworkHostname("192.168.50.149")).toBe(true)
+    expect(isLocalNetworkHostname("10.0.0.2")).toBe(true)
+    expect(isLocalNetworkHostname("172.31.2.8")).toBe(true)
+    expect(isLocalNetworkHostname("manbo.local")).toBe(true)
+    expect(isLocalNetworkHostname("downloads.example.com")).toBe(false)
+    expect(credentialStorageFor("192.168.50.149", false)).toBe("local")
+    expect(credentialStorageFor("downloads.example.com", true)).toBe("local")
+    expect(credentialStorageFor("downloads.example.com", false)).toBe("session")
   })
 
   test("合并文件与文件状态并转换优先级", async () => {

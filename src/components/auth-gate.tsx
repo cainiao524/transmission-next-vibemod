@@ -1,6 +1,6 @@
 import * as React from "react"
 import { DownloadCloud, LoaderCircle, LockKeyhole } from "lucide-react"
-import { rpc } from "@/lib/rpc-client"
+import { rpc, TRANSMISSION_AUTH_LOGOUT_EVENT } from "@/lib/rpc-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -11,13 +11,25 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [password, setPassword] = React.useState("")
   const [error, setError] = React.useState("")
   const [submitting, setSubmitting] = React.useState(false)
+  const [rememberPassword, setRememberPassword] = React.useState(false)
+  const localAccess = React.useMemo(() => rpc.isLocalNetworkAccess(), [])
 
   React.useEffect(() => {
     let active = true
+    const handleLogout = () => {
+      if (!active) return
+      setPassword("")
+      setError("")
+      setStatus("guest")
+    }
+    window.addEventListener(TRANSMISSION_AUTH_LOGOUT_EVENT, handleLogout)
     rpc.checkAuthentication().then((authenticated) => {
       if (active) setStatus(authenticated ? "authenticated" : "guest")
     })
-    return () => { active = false }
+    return () => {
+      active = false
+      window.removeEventListener(TRANSMISSION_AUTH_LOGOUT_EVENT, handleLogout)
+    }
   }, [])
 
   const submit = async (event: React.FormEvent) => {
@@ -26,7 +38,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     setSubmitting(true)
     setError("")
     try {
-      await rpc.login(username, password)
+      await rpc.login(username, password, rememberPassword)
       setStatus("authenticated")
     } catch {
       setError("登录失败，请检查地址、用户名和密码。")
@@ -72,6 +84,21 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
                   <Input autoFocus autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="用户名" className="h-12 rounded-xl bg-muted/40 border-none" />
                   <Input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="密码" className="h-12 rounded-xl bg-muted/40 border-none" />
                 </div>
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-muted/30 px-3 py-3 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-green-500"
+                    checked={localAccess || rememberPassword}
+                    disabled={localAccess}
+                    onChange={(event) => setRememberPassword(event.target.checked)}
+                  />
+                  <span className="leading-relaxed">
+                    <span className="font-medium">{localAccess ? "本地网络自动记住凭据" : "记住密码"}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      {localAccess ? "退出不会删除凭据，关闭页面后再次打开将自动登录。" : "仅在此设备保存；退出登录时会清除凭据。"}
+                    </span>
+                  </span>
+                </label>
                 {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
                 <Button type="submit" disabled={submitting || !username || !password} className="w-full h-12 rounded-xl font-semibold">
                   {submitting ? <LoaderCircle className="animate-spin" /> : "连接并登录"}
