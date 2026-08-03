@@ -27,32 +27,10 @@ interface RpcEnvelope<T> {
 const AUTH_STORAGE_KEY = "transmission_basic_auth"
 export const TRANSMISSION_AUTH_LOGOUT_EVENT = "transmission-auth-logout"
 
-export function isLocalNetworkHostname(hostname: string): boolean {
-  const normalized = hostname.trim().toLowerCase().replace(/^\[|\]$/g, "")
-  if (!normalized) return false
-  if (normalized === "localhost" || normalized.endsWith(".localhost") || normalized.endsWith(".local")) return true
-  if (normalized === "::1") return true
-  if (normalized.includes(":") && (normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe80:"))) return true
-
-  const octets = normalized.split(".").map(Number)
-  if (octets.length !== 4 || octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) return false
-  return octets[0] === 10
-    || octets[0] === 127
-    || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31)
-    || (octets[0] === 192 && octets[1] === 168)
-    || (octets[0] === 169 && octets[1] === 254)
-}
-
-export function credentialStorageFor(hostname: string, rememberPassword: boolean): "local" | "session" {
-  return isLocalNetworkHostname(hostname) || rememberPassword ? "local" : "session"
-}
-
-function currentHostname(): string {
-  return typeof window === "undefined" ? "" : window.location.hostname
-}
-
-function storedAuthHeader(): string | null {
-  return localStorage.getItem(AUTH_STORAGE_KEY) ?? sessionStorage.getItem(AUTH_STORAGE_KEY)
+function clearLegacyStoredAuth(): void {
+  if (typeof window === "undefined") return
+  localStorage.removeItem(AUTH_STORAGE_KEY)
+  sessionStorage.removeItem(AUTH_STORAGE_KEY)
 }
 
 const CORE_FIELDS = [
@@ -235,7 +213,11 @@ function mapTorrent(raw: JsonRecord): Torrent {
 class TransmissionRPC {
   private baseUrl = import.meta.env.VITE_TRANSMISSION_RPC_URL || "/transmission/rpc"
   private sessionId: string | null = null
-  private authHeader: string | null = storedAuthHeader()
+  private authHeader: string | null = null
+
+  constructor() {
+    clearLegacyStoredAuth()
+  }
 
   private async request<T = JsonRecord>(method: string, args?: JsonRecord, retry = true): Promise<T> {
     const headers: Record<string, string> = { "Content-Type": "application/json" }
@@ -266,21 +248,12 @@ class TransmissionRPC {
     }
   }
 
-  isLocalNetworkAccess(): boolean {
-    return isLocalNetworkHostname(currentHostname())
-  }
-
-  async login(username: string, password: string, rememberPassword = false): Promise<void> {
+  async login(username: string, password: string): Promise<void> {
     const previous = this.authHeader
     this.authHeader = `Basic ${btoa(`${username}:${password}`)}`
     this.sessionId = null
     try {
       await this.getSession()
-      const storage = credentialStorageFor(currentHostname(), rememberPassword)
-      localStorage.removeItem(AUTH_STORAGE_KEY)
-      sessionStorage.removeItem(AUTH_STORAGE_KEY)
-      if (storage === "local") localStorage.setItem(AUTH_STORAGE_KEY, this.authHeader)
-      else sessionStorage.setItem(AUTH_STORAGE_KEY, this.authHeader)
     } catch (error) {
       this.authHeader = previous
       throw error
@@ -290,8 +263,7 @@ class TransmissionRPC {
   async logout(): Promise<void> {
     this.authHeader = null
     this.sessionId = null
-    sessionStorage.removeItem(AUTH_STORAGE_KEY)
-    if (!this.isLocalNetworkAccess()) localStorage.removeItem(AUTH_STORAGE_KEY)
+    clearLegacyStoredAuth()
     if (typeof window !== "undefined") window.dispatchEvent(new Event(TRANSMISSION_AUTH_LOGOUT_EVENT))
   }
 
