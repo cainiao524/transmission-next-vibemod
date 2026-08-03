@@ -9,6 +9,7 @@
 <p align="center">
   <a href="https://github.com/cainiao524/tranemission-next-vibemod/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/cainiao524/tranemission-next-vibemod/build.yml?branch=main&label=%E6%9E%84%E5%BB%BA" alt="构建状态" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/cainiao524/tranemission-next-vibemod" alt="许可证" /></a>
+  <a href="https://hub.docker.com/r/lowsabishi/tranemission-next-vibemod"><img src="https://img.shields.io/docker/pulls/lowsabishi/tranemission-next-vibemod?label=Docker%20Hub" alt="Docker Hub 镜像拉取量" /></a>
   <img src="https://img.shields.io/badge/Transmission-4.x-d76b2b" alt="Transmission 兼容版本" />
 </p>
 
@@ -18,9 +19,52 @@ Transmission VibeMod 使用 React、Vite、Tailwind CSS 与 shadcn/ui 构建，�
 
 当前版本支持任务列表、添加磁力链接与种子文件、拖放快速添加、开始与暂停、删除、校验、重新汇报、队列排序、移动数据位置、标签、Tracker、Peer、文件树、文件优先级、批量与范围选择、键盘快捷键、速度历史图表及会话设置。
 
-## 推荐安装：Docker＋Nginx 反向代理
+## 安装方式
 
-这是本项目推荐且经过实际测试的安装方式。Nginx 同时提供 WebUI 静态文件和 `/transmission/rpc` 反向代理，使页面与 RPC 保持同源，可以避免跨域问题，并由自定义登录页接管认证流程。
+| 推荐顺序 | 安装方式 | 适合场景 |
+| --- | --- | --- |
+| 1 | **Docker Hub 镜像** | NAS、Docker，配置最少且升级方便，首要推荐 |
+| 2 | 发行版＋Nginx 反向代理 | 希望自行管理静态文件与 Nginx 配置 |
+| 3 | 从源码构建 | 开发、二次修改或需要最新 `main` 分支 |
+
+> 首要推荐直接拉取 Docker Hub 镜像。镜像已经包含 WebUI、Nginx 和 Transmission RPC 代理配置，不需要下载发行版、解压文件或手动编写 Nginx 配置。
+
+## 安装方式一：Docker Hub 镜像（推荐）
+
+镜像地址：[lowsabishi/tranemission-next-vibemod](https://hub.docker.com/r/lowsabishi/tranemission-next-vibemod)，支持 `linux/amd64` 与 `linux/arm64`。`latest` 跟随最新稳定镜像，也可以使用固定版本标签 `vBAKA9`。
+
+创建 `docker-compose.yml`：
+
+```yaml
+services:
+  tranemission-next-vibemod:
+    image: lowsabishi/tranemission-next-vibemod:latest
+    container_name: tranemission-next-vibemod
+    environment:
+      TRANSMISSION_URL: http://192.168.50.149:9091
+    ports:
+      - "40984:80"
+    restart: unless-stopped
+```
+
+把 `TRANSMISSION_URL` 改成 Transmission RPC 的实际地址，地址末尾不要添加 `/transmission/rpc`，然后启动：
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+浏览器访问 `http://服务器地址:40984`，使用 Transmission RPC 的账户登录。如果 Transmission 没有启用认证，页面会自动进入。
+
+如果两个服务位于同一个 Compose 网络，可以把地址写成 `http://transmission:9091`。需要锁定当前版本时，将镜像改为：
+
+```yaml
+image: lowsabishi/tranemission-next-vibemod:vBAKA9
+```
+
+## 安装方式二：发行版＋Nginx 反向代理
+
+这是原来的推荐安装方式，现调整为次要方式。Nginx 同时提供发行版 WebUI 静态文件和 `/transmission/rpc` 反向代理，使页面与 RPC 保持同源，可以避免跨域问题，并由自定义登录页接管认证流程。
 
 这种方式具有以下优点：
 
@@ -223,7 +267,7 @@ docker compose up -d --force-recreate
 try_files $uri $uri/ /index.html;
 ```
 
-## 从源码构建
+## 安装方式三：从源码构建
 
 需要 Node.js 22 和 pnpm 10：
 
