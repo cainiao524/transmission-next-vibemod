@@ -2,6 +2,8 @@
 import type { ApplicationPreferences, Session, TorrentFilePriority, TorrentPieceState } from "./rpc-types";
 import { MOCK_SESSION, MOCK_STATS, MOCK_TORRENTS } from "./mock-data";
 
+export const TRANSMISSION_AUTH_LOGOUT_EVENT = "transmission-auth-logout";
+
 const MOCK_APPLICATION_PREFERENCES: ApplicationPreferences = {
   locale: "zh_CN",
   save_path: "/srv/downloads",
