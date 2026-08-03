@@ -1,5 +1,5 @@
 export const APP_CONFIG = {
-  version: "vOBJ_v19_更新了一个油桶",
+  version: "vBAKA⑨",
   githubUrl: "https://github.com/cainiao524/tranemission-next-vibemod",
   name: "Transmission VibeMod"
 }
