@@ -4,6 +4,9 @@ import { rpc, TRANSMISSION_AUTH_LOGOUT_EVENT } from "@/lib/rpc-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ThemeProvider } from "@/components/theme-provider"
+import { isBrowserAutofilled, isPrivateNetworkHost } from "@/lib/network"
+
+const AUTO_LOGIN_SUPPRESSED_KEY = "transmission_auto_login_suppressed"
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = React.useState<"checking" | "guest" | "authenticated">("checking")
@@ -11,11 +14,17 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [password, setPassword] = React.useState("")
   const [error, setError] = React.useState("")
   const [submitting, setSubmitting] = React.useState(false)
+  const usernameInputRef = React.useRef<HTMLInputElement>(null)
+  const passwordInputRef = React.useRef<HTMLInputElement>(null)
+  const automaticLoginStarted = React.useRef(false)
+  const privateNetwork = isPrivateNetworkHost(window.location.hostname)
 
   React.useEffect(() => {
     let active = true
     const handleLogout = () => {
       if (!active) return
+      sessionStorage.setItem(AUTO_LOGIN_SUPPRESSED_KEY, "1")
+      automaticLoginStarted.current = false
       setPassword("")
       setError("")
       setStatus("guest")
@@ -30,19 +39,51 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault()
-    if (!username || !password) return
+  const authenticate = React.useCallback(async (nextUsername: string, nextPassword: string) => {
+    if (!nextUsername || !nextPassword) return
     setSubmitting(true)
     setError("")
     try {
-      await rpc.login(username, password)
+      await rpc.login(nextUsername, nextPassword)
+      sessionStorage.removeItem(AUTO_LOGIN_SUPPRESSED_KEY)
       setStatus("authenticated")
     } catch {
+      automaticLoginStarted.current = false
       setError("登录失败，请检查地址、用户名和密码。")
     } finally {
       setSubmitting(false)
     }
+  }, [])
+
+  React.useEffect(() => {
+    if (status !== "guest" || !privateNetwork || sessionStorage.getItem(AUTO_LOGIN_SUPPRESSED_KEY)) return
+
+    let checks = 0
+    const timer = window.setInterval(() => {
+      checks += 1
+      const usernameInput = usernameInputRef.current
+      const passwordInput = passwordInputRef.current
+      if (!usernameInput || !passwordInput || automaticLoginStarted.current) return
+
+      const hasBrowserCredentials = usernameInput.value && passwordInput.value
+        && (isBrowserAutofilled(usernameInput) || isBrowserAutofilled(passwordInput))
+      if (hasBrowserCredentials) {
+        automaticLoginStarted.current = true
+        setUsername(usernameInput.value)
+        setPassword(passwordInput.value)
+        window.clearInterval(timer)
+        void authenticate(usernameInput.value, passwordInput.value)
+      } else if (checks >= 30) {
+        window.clearInterval(timer)
+      }
+    }, 200)
+
+    return () => window.clearInterval(timer)
+  }, [authenticate, privateNetwork, status])
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    await authenticate(username, password)
   }
 
   if (status === "authenticated") return children
@@ -79,14 +120,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
                   <p className="mt-2 text-sm text-muted-foreground">使用 Transmission RPC 的账户凭据。</p>
                 </div>
                 <div className="space-y-3">
-                  <Input name="username" autoFocus autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="用户名" className="h-12 rounded-xl bg-muted/40 border-none" />
-                  <Input name="password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="密码" className="h-12 rounded-xl bg-muted/40 border-none" />
+                  <Input ref={usernameInputRef} name="username" autoFocus={!privateNetwork} autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="用户名" className="h-12 rounded-xl bg-muted/40 border-none" />
+                  <Input ref={passwordInputRef} name="password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="密码" className="h-12 rounded-xl bg-muted/40 border-none" />
                 </div>
                 {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
                 <Button type="submit" disabled={submitting || !username || !password} className="w-full h-12 rounded-xl font-semibold">
                   {submitting ? <LoaderCircle className="animate-spin" /> : "连接并登录"}
                 </Button>
-                <p className="text-xs text-muted-foreground leading-relaxed">WebUI 不保存密码；密码保存与自动填充由浏览器密码管理器控制。</p>
               </form>
             )}
           </div>
