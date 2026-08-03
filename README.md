@@ -18,11 +18,30 @@ Transmission VibeMod 使用 React、Vite、Tailwind CSS 与 shadcn/ui 构建，�
 
 当前版本支持任务列表、添加磁力链接与种子文件、拖放快速添加、开始与暂停、删除、校验、重新汇报、队列排序、移动数据位置、标签、Tracker、Peer、文件树、文件优先级、批量与范围选择、键盘快捷键、速度历史图表及会话设置。
 
-## 使用发行版安装
+## 推荐安装：Docker＋Nginx 反向代理
 
-从 [Releases](https://github.com/cainiao524/tranemission-next-vibemod/releases/latest) 下载 `tranemission-next-vibemod.zip`，解压到网页服务器目录。静态页面必须与 Transmission RPC 位于同源反向代理后，不能只用浏览器直接打开 `index.html`。
+这是本项目推荐且经过实际测试的安装方式。Nginx 同时提供 WebUI 静态文件和 `/transmission/rpc` 反向代理，使页面与 RPC 保持同源，可以避免跨域问题，并由自定义登录页接管认证流程。
 
-仓库提供了 nginx 示例：
+这种方式具有以下优点：
+
+- 不需要修改 Transmission 自带网页目录。
+- WebUI 和 Transmission 可以分别更新。
+- 不必把 Transmission 的 `9091` 端口直接暴露到公网。
+- 可以隐藏 `WWW-Authenticate` 响应头，避免浏览器弹出原生基础认证对话框。
+- 用户名和密码不由 WebUI 保存，密码保存与自动填充交给浏览器密码管理器。
+
+### 1. 准备目录
+
+NAS 示例目录：
+
+```bash
+mkdir -p /vol1/1000/Docker/Compose/tranemission-next-vibemod/webui
+cd /vol1/1000/Docker/Compose/tranemission-next-vibemod
+```
+
+普通 Linux 服务器也可以使用其他目录，例如 `/opt/tranemission-next-vibemod`。
+
+最终目录结构如下：
 
 ```text
 tranemission-next-vibemod/
@@ -33,45 +52,176 @@ tranemission-next-vibemod/
    └─ assets/
 ```
 
-下载并启动：
+### 2. 下载发行版
+
+安装 `curl` 和 `unzip` 后执行：
 
 ```bash
-mkdir -p tranemission-next-vibemod/webui
-cd tranemission-next-vibemod
 curl -L https://github.com/cainiao524/tranemission-next-vibemod/releases/latest/download/tranemission-next-vibemod.zip -o webui.zip
-unzip webui.zip -d webui
-curl -L https://raw.githubusercontent.com/cainiao524/tranemission-next-vibemod/main/docker-compose.yml -o docker-compose.yml
-curl -L https://raw.githubusercontent.com/cainiao524/tranemission-next-vibemod/main/nginx.conf -o nginx.conf
-docker compose up -d
+unzip -o webui.zip -d webui
 ```
 
-默认网页端口为 `40984`。请在 `nginx.conf` 中把 `proxy_pass` 的地址改成 Transmission RPC 的真实地址，例如：
+请勿直接双击 `index.html`，WebUI 必须通过网页服务器访问，并把 `/transmission/rpc` 转发到 Transmission。
+
+### 3. 创建 docker-compose.yml
+
+```yaml
+services:
+  webui:
+    image: nginx:alpine
+    container_name: tranemission-next-vibemod
+    ports:
+      - "${WEBUI_PORT:-40984}:80"
+    volumes:
+      - ./webui:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+```
+
+默认访问端口为 `40984`。如需改为 `8088`，可以创建 `.env`：
+
+```dotenv
+WEBUI_PORT=8088
+```
+
+### 4. 创建 nginx.conf
+
+下面示例假设 Transmission 位于 `192.168.1.10:9091`。请把该地址替换成你的 NAS 或 Transmission 服务器地址。
 
 ```nginx
-proxy_pass http://192.168.50.149:9091/transmission/rpc;
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location = /index.html {
+        add_header Cache-Control "no-store";
+        try_files $uri =404;
+    }
+
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
+    }
+
+    location /transmission/rpc {
+        proxy_pass http://192.168.1.10:9091/transmission/rpc;
+        proxy_http_version 1.1;
+
+        # 避免外网域名触发 Transmission 的主机名白名单检查。
+        proxy_set_header Host 127.0.0.1;
+
+        # 传递 Transmission 的基础认证和会话编号。
+        proxy_set_header Authorization $http_authorization;
+        proxy_set_header X-Transmission-Session-Id $http_x_transmission_session_id;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_pass_request_headers on;
+
+        # 必须保留：防止浏览器弹出原生账号密码对话框。
+        proxy_hide_header WWW-Authenticate;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
 ```
 
-如果需要其他网页端口，可以执行：
+注意：Nginx 运行在容器内，`127.0.0.1:9091` 指向 Nginx 容器自身，通常不能用于连接 NAS 主机上的 Transmission。请使用 NAS 的局域网地址，或把两个容器加入同一个 Docker 网络。
+
+如果 Transmission 服务名为 `transmission`，并且两个容器位于同一个 Docker 网络，可以改成：
+
+```nginx
+proxy_pass http://transmission:9091/transmission/rpc;
+```
+
+### 5. 启动 WebUI
 
 ```bash
-WEBUI_PORT=8088 docker compose up -d
+docker compose up -d
+docker compose ps
 ```
 
-## NAS 安装示例
-
-本项目的测试部署目录为：
-
-```text
-/vol1/1000/Docker/Compose/tranemission-next-vibemod
-```
-
-部署完成后访问：
+打开：
 
 ```text
 http://NAS地址:40984
 ```
 
-使用 Transmission RPC 的用户名和密码登录；如果服务端未启用认证，页面会自动进入。
+使用 Transmission RPC 的用户名和密码登录。如果 Transmission 未启用认证，页面会自动进入。启用认证后，浏览器可以通过标准密码管理器询问是否保存密码；WebUI 本身不会保存密码。
+
+### 6. 验证反向代理
+
+确认首页：
+
+```bash
+curl -I http://127.0.0.1:40984/
+```
+
+确认 RPC 代理：
+
+```bash
+curl -i -X POST \
+  -H 'Content-Type: application/json' \
+  --data '{"method":"session-get"}' \
+  http://127.0.0.1:40984/transmission/rpc
+```
+
+未携带账号密码时返回 `401 Unauthorized` 属于正常现象，但响应头中不应再出现 `WWW-Authenticate`。登录后首次 RPC 请求返回 `409 Conflict` 也属于 Transmission 的正常会话编号协商，WebUI 会自动读取编号并重试。
+
+### 7. 外网访问
+
+建议在现有反向代理、网关或隧道中为 `40984` 配置 HTTPS 域名，只向外提供 HTTPS 入口，不要直接向公网开放 Transmission 的 `9091` 端口。
+
+浏览器密码按协议、域名和端口分别保存，因此局域网地址与外网 HTTPS 域名通常需要各自保存一次。公共或临时设备上不要允许浏览器保存密码。
+
+### 8. 更新 WebUI
+
+先备份旧网页目录，再解压最新发行版：
+
+```bash
+cd /vol1/1000/Docker/Compose/tranemission-next-vibemod
+mv webui "webui-backup-$(date +%Y%m%d-%H%M%S)"
+mkdir webui
+curl -L https://github.com/cainiao524/tranemission-next-vibemod/releases/latest/download/tranemission-next-vibemod.zip -o webui.zip
+unzip -o webui.zip -d webui
+docker compose up -d --force-recreate
+```
+
+### 9. 常见问题
+
+#### 浏览器仍弹出原生账号密码对话框
+
+检查 `nginx.conf` 的 RPC 区块是否包含：
+
+```nginx
+proxy_hide_header WWW-Authenticate;
+```
+
+修改后执行：
+
+```bash
+docker compose up -d --force-recreate
+```
+
+#### 登录页面始终提示连接失败
+
+- 检查 `proxy_pass` 的 IP、端口和路径。
+- 确认 Nginx 容器可以访问 Transmission 的 `9091` 端口。
+- 不要把容器内的 `127.0.0.1:9091` 当作 NAS 主机地址。
+- 查看日志：`docker compose logs --tail=100 webui`。
+
+#### 页面能打开但刷新详情页失败
+
+确认 `location /` 中存在 SPA 回退规则：
+
+```nginx
+try_files $uri $uri/ /index.html;
+```
 
 ## 从源码构建
 
