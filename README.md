@@ -41,7 +41,7 @@ services:
     image: lowsabishi/tranemission-next-vibemod:latest
     container_name: tranemission-next-vibemod
     environment:
-      TRANSMISSION_URL: http://192.168.50.149:9091
+      TRANSMISSION_URL: http://192.168.1.10:9091
     ports:
       - "40984:80"
     restart: unless-stopped
@@ -288,7 +288,7 @@ pnpm build
 构建结果位于 `dist/`。开发服务器默认把 `/transmission` 代理到 `http://127.0.0.1:9091`。Transmission 位于其他地址时：
 
 ```bash
-VITE_TRANSMISSION_PROXY_TARGET=http://192.168.50.149:9091 pnpm dev
+VITE_TRANSMISSION_PROXY_TARGET=http://192.168.1.10:9091 pnpm dev
 ```
 
 前端 RPC 路径也可以在构建时通过 `VITE_TRANSMISSION_RPC_URL` 修改，默认值为 `/transmission/rpc`。

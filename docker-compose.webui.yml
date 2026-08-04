@@ -3,7 +3,7 @@ services:
     image: lowsabishi/tranemission-next-vibemod:latest
     container_name: tranemission-next-vibemod
     environment:
-      TRANSMISSION_URL: http://192.168.50.149:9091
+      TRANSMISSION_URL: http://192.168.1.10:9091
     ports:
       - "40984:80"
     restart: unless-stopped
