@@ -1,9 +1,9 @@
-name: Build test Docker image
+name: Build and publish Docker images
 
 on:
   workflow_dispatch:
   push:
-    tags: ["v*", "V*"]
+    tags: ["v*", "V*", "beta*"]
 
 permissions:
   contents: read
@@ -16,21 +16,49 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v5
 
       - uses: docker/setup-buildx-action@v3
 
-      - uses: docker/login-action@v3
+      - name: Login Docker Hub
+        if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker Hub
+        if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            lowsabishi/tranemission-next-vibemod:latest
+            lowsabishi/tranemission-next-vibemod:v1.2-baka9
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/build-push-action@v6
+      - name: Build and push GHCR
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
-            ghcr.io/cainiao524/tranemission-next-vibemod-test:test
-            ghcr.io/cainiao524/tranemission-next-vibemod-test:sha-${{ github.sha }}
+            ghcr.io/cainiao524/tranemission-next-vibemod:latest
+            ghcr.io/cainiao524/tranemission-next-vibemod:v1.2-baka9

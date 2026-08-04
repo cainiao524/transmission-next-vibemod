@@ -23,15 +23,15 @@ Transmission VibeMod 使用 React、Vite、Tailwind CSS 与 shadcn/ui 构建，�
 
 | 推荐顺序 | 安装方式 | 适合场景 |
 | --- | --- | --- |
-| 1 | **Docker Hub 镜像** | NAS、Docker，配置最少且升级方便，首要推荐 |
+| 1 | **Docker Hub / GHCR 镜像** | NAS、Docker，配置最少且升级方便，首要推荐 |
 | 2 | 发行版＋Nginx 反向代理 | 希望自行管理静态文件与 Nginx 配置 |
 | 3 | 从源码构建 | 开发、二次修改或需要最新 `main` 分支 |
 
-> 首要推荐直接拉取 Docker Hub 镜像。镜像已经包含 WebUI、Nginx 和 Transmission RPC 代理配置，不需要下载发行版、解压文件或手动编写 Nginx 配置。
+> 首要推荐直接拉取 Docker Hub 镜像；GitHub Container Registry（GHCR）提供同一版本的备用镜像。两者都已包含 WebUI、Nginx 和 Transmission RPC 代理配置，不需要下载发行版、解压文件或手动编写 Nginx 配置。
 
 ## 安装方式一：Docker Hub 镜像（推荐）
 
-镜像地址：[lowsabishi/tranemission-next-vibemod](https://hub.docker.com/r/lowsabishi/tranemission-next-vibemod)，支持 `linux/amd64` 与 `linux/arm64`。`latest` 跟随最新稳定镜像，也可以使用固定版本标签 `vBAKA9`。
+镜像地址：[lowsabishi/tranemission-next-vibemod](https://hub.docker.com/r/lowsabishi/tranemission-next-vibemod)（Docker Hub，首选），备用镜像为 [ghcr.io/cainiao524/tranemission-next-vibemod](https://github.com/users/cainiao524/packages/container/package/tranemission-next-vibemod)（GHCR），均支持 `linux/amd64` 与 `linux/arm64`。`latest` 跟随最新稳定镜像，也可以使用固定版本标签 `v1.2-baka9`。
 
 创建 `docker-compose.yml`：
 
@@ -59,7 +59,13 @@ docker compose up -d
 如果两个服务位于同一个 Compose 网络，可以把地址写成 `http://transmission:9091`。需要锁定当前版本时，将镜像改为：
 
 ```yaml
-image: lowsabishi/tranemission-next-vibemod:vBAKA9
+image: lowsabishi/tranemission-next-vibemod:v1.2-baka9
+```
+
+如果从 Docker Hub 拉取受限，可以把镜像地址换成 GHCR：
+
+```yaml
+image: ghcr.io/cainiao524/tranemission-next-vibemod:v1.2-baka9
 ```
 
 ## 安装方式二：发行版＋Nginx 反向代理
