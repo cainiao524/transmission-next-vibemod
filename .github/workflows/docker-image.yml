@@ -34,15 +34,3 @@ jobs:
           tags: |
             ghcr.io/cainiao524/tranemission-next-vibemod-test:test
             ghcr.io/cainiao524/tranemission-next-vibemod-test:sha-${{ github.sha }}
-
-      - name: Set package visibility
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          for i in 1 2 3 4 5; do
-            gh api --method PATCH \
-              /user/packages/container/tranemission-next-vibemod-test/visibility \
-              -f visibility=public && exit 0
-            sleep 5
-          done
-          exit 1
