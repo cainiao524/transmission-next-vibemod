@@ -143,7 +143,8 @@
     "set_labels_overwrite_hint": "替换选中种子的所有现有标签",
     "set_labels_append_hint": "在选中种子的现有标签基础上添加新标签",
     "set_labels_confirm": "应用到 {count} 个种子",
-    "set_labels_success": "已成功为 {count} 个种子设置标签"
+    "set_labels_success": "已成功为 {count} 个种子设置标签",
+    "total_size": "总大小"
   },
   "details": {
     "general": "常规",
@@ -193,7 +194,9 @@
     "tracker_url": "Tracker 地址",
     "address": "地址",
     "client": "客户端",
-    "country": "国家/地区"
+    "country": "国家/地区",
+    "view_details": "查看详情",
+    "select_all": "全选"
   },
   "settings": {
     "title": "服务器设置",

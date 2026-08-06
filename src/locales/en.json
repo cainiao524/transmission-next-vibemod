@@ -136,7 +136,8 @@
     "set_labels_overwrite_hint": "Replace all existing labels on selected torrents",
     "set_labels_append_hint": "Add new labels to existing labels on selected torrents",
     "set_labels_confirm": "Apply to {count} torrents",
-    "set_labels_success": "Successfully set labels for {count} torrents"
+    "set_labels_success": "Successfully set labels for {count} torrents",
+    "total_size": "Total Size"
   },
   "details": {
     "general": "General",
@@ -186,7 +187,9 @@
     "tracker_url": "Tracker URL",
     "address": "Address",
     "client": "Client",
-    "country": "Country"
+    "country": "Country",
+    "view_details": "View Details",
+    "select_all": "Select All"
   },
   "settings": {
     "title": "Server Settings",

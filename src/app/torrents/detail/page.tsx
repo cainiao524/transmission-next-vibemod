@@ -147,6 +147,7 @@ function TorrentDetailsContent() {
   }
 
   const tor = torrent;
+  const isComplete = tor.totalSize > 0 && tor.downloadedEver >= tor.totalSize;
 
   const isStopped = tor.status === TorrentStatus.STOPPED;
 
@@ -198,10 +199,10 @@ function TorrentDetailsContent() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[1600px] min-w-0 flex-col gap-6 overflow-x-clip animate-in fade-in duration-500 ease-out">
+    <div className="flex flex-col gap-6 animate-in fade-in duration-500 ease-out">
       {/* Header Section */}
       <div className="flex flex-col gap-6">
-        <div className="flex min-w-0 flex-col gap-6 overflow-hidden lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 overflow-hidden">
           <div className="flex items-start gap-4 flex-1 min-w-0 pl-1">
             <Button
               variant="outline"
@@ -212,8 +213,8 @@ function TorrentDetailsContent() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex flex-col min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                <h1 className="text-xl md:text-3xl font-semibold tracking-tight truncate max-w-full" title={tor.name}>{tor.name}</h1>
+              <div className="flex flex-wrap items-center gap-2 md:gap-3 min-w-0">
+                <h1 className="text-xl md:text-3xl font-semibold tracking-tight min-w-0 break-all" title={tor.name}>{tor.name}</h1>
                 <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] md:text-xs font-semibold uppercase tracking-widest ${tor.status === TorrentStatus.DOWNLOAD ? "bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400" :
                   tor.status === TorrentStatus.SEED ? "bg-blue-100 text-blue-800 dark:bg-blue-950/30 dark:text-blue-400" :
                     "bg-muted text-muted-foreground"
@@ -242,8 +243,8 @@ function TorrentDetailsContent() {
         </div>
 
         {/* Quick Summary Grid */}
-        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4">
-          <Card className="flex min-w-0 flex-col overflow-hidden border-border/60 bg-card py-0 shadow-md">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="shadow-md border-none bg-sidebar/40 py-0 flex flex-col overflow-hidden">
             <CardHeader className="pt-4 pb-2 border-b border-muted/20 px-4">
               <CardTitle className="text-[10px] md:text-xs font-medium uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                 <Activity className="h-3.5 w-3.5" /> {t('common.progress')}
@@ -252,14 +253,14 @@ function TorrentDetailsContent() {
             <CardContent className="py-4 md:py-6 flex flex-col gap-2 px-4">
               <div className="flex justify-between items-baseline">
                 <span className="text-2xl md:text-3xl font-medium text-primary">{(tor.percentDone * 100).toFixed(1)}%</span>
-                <span className="text-[10px] md:text-xs font-medium text-muted-foreground">{formatSize(tor.downloadedEver)} / {formatSize(tor.totalSize)}</span>
+                {!isComplete && <span className="text-[10px] md:text-xs font-medium text-muted-foreground">{formatSize(tor.downloadedEver)} / {formatSize(tor.totalSize)}</span>}
               </div>
               <div className="w-full bg-muted rounded-full h-1.5 md:h-2 overflow-hidden">
                 <div className="bg-primary h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(var(--primary),0.5)]" style={{ width: `${tor.percentDone * 100}%` }}></div>
               </div>
             </CardContent>
           </Card>
-          <Card className="flex min-w-0 flex-col overflow-hidden border-border/60 bg-card py-0 shadow-md">
+          <Card className="shadow-md border-none bg-sidebar/40 py-0 flex flex-col overflow-hidden">
             <CardHeader className="pt-4 pb-2 border-b border-muted/20 px-4">
               <CardTitle className="text-[10px] md:text-xs font-medium uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                 <ArrowDown className="h-3.5 w-3.5 text-green-500" /> {t('common.status')}
@@ -272,7 +273,7 @@ function TorrentDetailsContent() {
               </div>
             </CardContent>
           </Card>
-          <Card className="flex min-w-0 flex-col overflow-hidden border-border/60 bg-card py-0 shadow-md">
+          <Card className="shadow-md border-none bg-sidebar/40 py-0 flex flex-col overflow-hidden">
             <CardHeader className="pt-4 pb-2 border-b border-muted/20 px-4">
               <CardTitle className="text-[10px] md:text-xs font-medium uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                 <Clock className="h-3.5 w-3.5" /> {t('details.remaining_time')}
@@ -283,7 +284,7 @@ function TorrentDetailsContent() {
               <p className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase mt-1">{t('details.estimating_completion')}</p>
             </CardContent>
           </Card>
-          <Card className="flex min-w-0 flex-col overflow-hidden border-border/60 bg-card py-0 shadow-md">
+          <Card className="shadow-md border-none bg-sidebar/40 py-0 flex flex-col overflow-hidden">
             <CardHeader className="pt-4 pb-2 border-b border-muted/20 px-4">
               <CardTitle className="text-[10px] md:text-xs font-medium uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                 <Users className="h-3.5 w-3.5" /> {t('details.connections')}
@@ -300,7 +301,7 @@ function TorrentDetailsContent() {
       </div>
 
       {/* Details Sections with Tabs-like Header */}
-      <div className="relative flex min-w-0 flex-col gap-4 [--detail-tabs-offset:10rem] md:[--detail-tabs-offset:10.5rem]">
+      <div className="relative flex flex-col gap-4 [--detail-tabs-offset:10rem] md:[--detail-tabs-offset:10.5rem]">
         <div className="sticky top-20 z-30 h-16 w-full shrink-0 before:pointer-events-none before:absolute before:inset-x-0 before:-top-4 before:h-4 before:bg-background before:content-[''] md:h-[4.5rem] sm:self-start">
           <div className="flex h-full w-full items-center gap-1 overflow-x-auto rounded-2xl border border-muted/30 bg-background/95 p-1 shadow-lg shadow-black/5 backdrop-blur-xl no-scrollbar dark:shadow-black/30">
           <Button

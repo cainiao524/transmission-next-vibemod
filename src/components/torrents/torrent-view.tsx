@@ -162,7 +162,7 @@ export function TorrentView({ statusFilter, showStats = true }: TorrentViewProps
     localStorage.setItem('torrent-page-size', pageSize.toString())
   }, [pageSize])
 
-  const { torrents, stats, freeSpace, fetchData } = useTorrentData(showStats, viewMode, visibleColumns)
+  const { torrents, stats, freeSpace, fetchData } = useTorrentData(viewMode, visibleColumns)
 
   const {
     trackerFilter,

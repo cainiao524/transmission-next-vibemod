@@ -51,7 +51,7 @@ const OPTIONAL_FIELDS = new Set([
   ...CORE_FIELDS,
   "labels", "trackers", "trackerStats", "files", "fileStats", "peers", "comment", "creator", "dateCreated",
   "trackerList", "secondsDownloading", "secondsSeeding", "peer-limit", "pieceCount", "pieceSize", "haveValid",
-  "haveUnchecked", "desiredAvailable", "leftUntilDone", "metadataPercentComplete",
+  "haveUnchecked", "desiredAvailable", "leftUntilDone", "metadataPercentComplete", "size",
 ])
 
 const WRITABLE_SESSION_FIELDS = new Set([
@@ -126,6 +126,7 @@ function mapTorrent(raw: JsonRecord): Torrent {
     status: numberValue(raw, "status") as Torrent["status"],
     hashString: stringValue(raw, "hashString"),
     totalSize: numberValue(raw, "totalSize"),
+    size: numberValue(raw, "sizeWhenDone", numberValue(raw, "totalSize")),
     percentDone: numberValue(raw, "percentDone"),
     rateDownload: numberValue(raw, "rateDownload"),
     rateUpload: numberValue(raw, "rateUpload"),
@@ -292,11 +293,25 @@ class TransmissionRPC {
       if (field === "connectionsLimit") requested.add("peer-limit")
       if (["piecesCount", "piecesHave"].includes(field)) ["pieceCount", "pieceSize", "haveValid", "haveUnchecked"].forEach((item) => requested.add(item))
       if (field === "availability") ["desiredAvailable", "leftUntilDone"].forEach((item) => requested.add(item))
+      if (field === "size") requested.add("sizeWhenDone")
     })
     const args: JsonRecord = { fields: [...requested] }
     if (ids?.length) args.ids = ids
     const response = await this.request<{ torrents: JsonRecord[] }>("torrent-get", args)
     return { torrents: response.torrents.map(mapTorrent) }
+  }
+
+  async exportTorrent(id: TorrentId): Promise<{ blob: Blob }> {
+    const response = await this.request<{ torrents: JsonRecord[] }>("torrent-get", {
+      ids: [id],
+      fields: ["metainfo"],
+    })
+    const metainfo = stringValue(response.torrents[0] ?? {}, "metainfo")
+    if (!metainfo) throw new Error("Transmission RPC：未返回种子元数据")
+    const binary = atob(metainfo)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i)
+    return { blob: new Blob([bytes], { type: "application/x-bittorrent" }) }
   }
 
   async getTorrentPieceStates(id: TorrentId): Promise<TorrentPieceState[]> {
