@@ -52,7 +52,7 @@ services:
     environment:
       TRANSMISSION_URL: http://host.docker.internal:9091
     ports:
-      - "40984:80"
+      - "9095:80"
     restart: unless-stopped
 ```
 
@@ -63,7 +63,7 @@ docker compose pull
 docker compose up -d
 ```
 
-浏览器访问 `http://服务器地址:40984`，使用 Transmission RPC 的账户登录。如果 Transmission 没有启用认证，页面会自动进入。
+浏览器访问 `http://服务器地址:9095`，使用 Transmission RPC 的账户登录。如果 Transmission 没有启用认证，页面会自动进入。
 
 #### 写法 B：直接填写宿主机局域网 IP（原有写法）
 创建 `docker-compose.yml`：
@@ -76,7 +76,7 @@ services:
     environment:
       TRANSMISSION_URL: http://192.168.1.10:9091
     ports:
-      - "40984:80"
+      - "9095:80"
     restart: unless-stopped
 ```
 
@@ -87,7 +87,7 @@ docker compose pull
 docker compose up -d
 ```
 
-浏览器访问 `http://服务器地址:40984`，使用 Transmission RPC 的账户登录。如果 Transmission 没有启用认证，页面会自动进入。
+浏览器访问 `http://服务器地址:9095`，使用 Transmission RPC 的账户登录。如果 Transmission 没有启用认证，页面会自动进入。
 
 如果两个服务位于同一个 Compose 网络，可以把地址写成 `http://transmission:9091`。需要锁定当前版本时，将镜像改为：
 
@@ -154,14 +154,14 @@ services:
     image: nginx:alpine
     container_name: tranemission-next-vibemod
     ports:
-      - "${WEBUI_PORT:-40984}:80"
+      - "${WEBUI_PORT:-9095}:80"
     volumes:
       - ./webui:/usr/share/nginx/html:ro
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
 ```
 
-默认访问端口为 `40984`。如需改为 `8088`，可以创建 `.env`：
+默认访问端口为 `9095`。如需改为 `8088`，可以创建 `.env`：
 
 ```dotenv
 WEBUI_PORT=8088
@@ -232,7 +232,7 @@ docker compose ps
 打开：
 
 ```text
-http://NAS地址:40984
+http://NAS地址:9095
 ```
 
 使用 Transmission RPC 的用户名和密码登录。如果 Transmission 未启用认证，页面会自动进入。启用认证后，浏览器可以通过标准密码管理器询问是否保存密码；WebUI 本身不会保存密码。
@@ -242,7 +242,7 @@ http://NAS地址:40984
 确认首页：
 
 ```bash
-curl -I http://127.0.0.1:40984/
+curl -I http://127.0.0.1:9095/
 ```
 
 确认 RPC 代理：
@@ -251,14 +251,14 @@ curl -I http://127.0.0.1:40984/
 curl -i -X POST \
   -H 'Content-Type: application/json' \
   --data '{"method":"session-get"}' \
-  http://127.0.0.1:40984/transmission/rpc
+  http://127.0.0.1:9095/transmission/rpc
 ```
 
 未携带账号密码时返回 `401 Unauthorized` 属于正常现象，但响应头中不应再出现 `WWW-Authenticate`。登录后首次 RPC 请求返回 `409 Conflict` 也属于 Transmission 的正常会话编号协商，WebUI 会自动读取编号并重试。
 
 ### 7. 外网访问
 
-建议在现有反向代理、网关或隧道中为 `40984` 配置 HTTPS 域名，只向外提供 HTTPS 入口，不要直接向公网开放 Transmission 的 `9091` 端口。
+建议在现有反向代理、网关或隧道中为 `9095` 配置 HTTPS 域名，只向外提供 HTTPS 入口，不要直接向公网开放 Transmission 的 `9091` 端口。
 
 浏览器密码按协议、域名和端口分别保存，因此局域网地址与外网 HTTPS 域名通常需要各自保存一次。公共或临时设备上不要允许浏览器保存密码。
 
