@@ -122,7 +122,7 @@ docker run -d \
   lowsabishi/tranemission-next-vibemod:latest
 ```
 
-> 提示：`./webui` 会创建在执行命令时的当前目录。如果想自行修改 webui 文件，请先 `cd` 到方便存取的目录（例如 `/volume1/docker/qbittorrent-next-ui`）再执行上面的命令；也可以把 `-v ./webui:/usr/share/nginx/html` 改成绝对路径，例如 `-v /volume1/docker/qbittorrent-next-ui/webui:/usr/share/nginx/html`。
+> 提示：`./webui` 会创建在执行命令时的当前目录。如果想自行修改 webui 文件，请先 `cd` 到方便存取的目录（例如 `/volume1/docker/tranemission-next-vibemod`）再执行上面的命令；也可以把 `-v ./webui:/usr/share/nginx/html` 改成绝对路径，例如 `-v /volume1/docker/tranemission-next-vibemod/webui:/usr/share/nginx/html`。
 
 
 首次启动会自动将内置 WebUI 释放到 `./webui` 目录，之后可直接覆盖该目录中的文件实时生效。浏览器访问 `http://服务器地址:9095`，使用 Transmission RPC 的账户登录。如果 Transmission 没有启用认证，页面会自动进入。
