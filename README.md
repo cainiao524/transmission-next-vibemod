@@ -109,6 +109,21 @@ image: lowsabishi/tranemission-next-vibemod:v1.4-baka9
 image: ghcr.io/cainiao524/tranemission-next-vibemod:v1.4-baka9
 ```
 
+#### 写法 C：docker run 快速启动
+
+```bash
+docker run -d \
+  --name tranemission-next-vibemod \
+  -p 9095:80 \
+  -e TRANSMISSION_URL=http://host.docker.internal:9091 \
+  --add-host host.docker.internal:host-gateway \   # Linux / NAS 需要；Docker Desktop 可删除
+  -v ./webui:/usr/share/nginx/html \
+  lowsabishi/tranemission-next-vibemod:latest
+```
+
+首次启动会自动将内置 WebUI 释放到 `./webui` 目录，之后可直接覆盖该目录中的文件实时生效。浏览器访问 `http://服务器地址:9095`，使用 Transmission RPC 的账户登录。如果 Transmission 没有启用认证，页面会自动进入。
+
+
 ## 安装方式二：发行版＋Nginx 反向代理
 
 这是原来的推荐安装方式，现调整为次要方式。Nginx 同时提供发行版 WebUI 静态文件和 `/transmission/rpc` 反向代理，使页面与 RPC 保持同源，可以避免跨域问题，并由自定义登录页接管认证流程。
