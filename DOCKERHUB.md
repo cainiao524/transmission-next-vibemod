@@ -17,20 +17,20 @@
 
 ```bash
 docker run -d \
-  --name tranemission-next-vibemod \
+  --name transmission-next-vibemod \
   -p 9095:80 \
   -e TRANSMISSION_URL=http://host.docker.internal:9091 \
   --add-host host.docker.internal:host-gateway \   # Linux / NAS 需要；Docker Desktop 可删除
-  lowsabishi/tranemission-next-vibemod:latest
+  lowsabishi/transmission-next-vibemod:latest
 ```
 
 ### docker-compose
 
 ```yaml
 services:
-  tranemission-next-vibemod:
-    image: lowsabishi/tranemission-next-vibemod:latest
-    container_name: tranemission-next-vibemod
+  transmission-next-vibemod:
+    image: lowsabishi/transmission-next-vibemod:latest
+    container_name: transmission-next-vibemod
     extra_hosts:
       - "host.docker.internal:host-gateway"   # Linux / NAS 需要；Docker Desktop 可删除
     ports:
@@ -51,8 +51,8 @@ services:
 - `latest`：跟随最新稳定版本
 - `v1.4-baka9`：固定版本标签（支持 linux/amd64、linux/arm64）
 
-备用镜像（GHCR）：`ghcr.io/cainiao524/tranemission-next-vibemod`
+备用镜像（GHCR）：`ghcr.io/cainiao524/transmission-next-vibemod`
 
 ## 相关链接
 
-- GitHub 项目：https://github.com/cainiao524/tranemission-next-vibemod
+- GitHub 项目：https://github.com/cainiao524/transmission-next-vibemod

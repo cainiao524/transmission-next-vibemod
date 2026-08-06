@@ -1,7 +1,7 @@
 services:
-  tranemission-next-vibemod:
-    image: lowsabishi/tranemission-next-vibemod:latest
-    container_name: tranemission-next-vibemod
+  transmission-next-vibemod:
+    image: lowsabishi/transmission-next-vibemod:latest
+    container_name: transmission-next-vibemod
     environment:
       TRANSMISSION_URL: http://192.168.1.10:9091
     ports:

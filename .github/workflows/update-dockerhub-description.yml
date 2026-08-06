@@ -16,7 +16,7 @@ jobs:
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          REPO_NAME: lowsabishi/tranemission-next-vibemod
+          REPO_NAME: lowsabishi/transmission-next-vibemod
         run: |
           python3 - <<'PYEOF'
           import json, os, urllib.request, urllib.error

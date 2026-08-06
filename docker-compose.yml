@@ -1,7 +1,7 @@
 services:
   webui:
     image: nginx:alpine
-    container_name: tranemission-next-vibemod
+    container_name: transmission-next-vibemod
     ports:
       - "${WEBUI_PORT:-40984}:80"
     volumes:
