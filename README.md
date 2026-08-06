@@ -67,6 +67,7 @@ docker compose up -d
 
 浏览器访问 `http://服务器地址:9095`，使用 Transmission RPC 的账户登录。如果 Transmission 没有启用认证，页面会自动进入。
 首次启动会自动将内置 WebUI 释放到 `./webui` 目录，之后可直接覆盖该目录中的文件实时生效，方便调试或自定义页面。挂载后 WebUI 文件以宿主机为准，重启容器不会覆盖你的修改。
+> 群晖 NAS（Container Manager）注意：`./webui` 目录不会被自动创建，若目录不存在，`docker compose up` 会报 `Bind mount failed`。首次部署或目录被删后，请先执行 `mkdir -p webui` 再启动，空目录会被自动填充。
 
 #### 写法 B：直接填写宿主机局域网 IP（原有写法）
 创建 `docker-compose.yml`：
@@ -96,6 +97,7 @@ docker compose up -d
 
 > 注意：容器通过默认网桥访问宿主机内网 IP 通常可用，但若因防火墙或路由限制连接失败，优先改用写法 A，或在同一个 Compose 网络内把地址直接写成 `http://transmission:9091`。
 首次启动会自动将内置 WebUI 释放到 `./webui` 目录，之后可直接覆盖该目录中的文件实时生效，方便调试或自定义页面。挂载后 WebUI 文件以宿主机为准，重启容器不会覆盖你的修改。
+> 群晖 NAS（Container Manager）注意：`./webui` 目录不会被自动创建，若目录不存在，`docker compose up` 会报 `Bind mount failed`。首次部署或目录被删后，请先执行 `mkdir -p webui` 再启动，空目录会被自动填充。
 
 如果两个服务位于同一个 Compose 网络，可以把地址写成 `http://transmission:9091`。需要锁定当前版本时，将镜像改为：
 
@@ -123,6 +125,7 @@ docker run -d \
 ```
 
 > 提示：`./webui` 会创建在执行命令时的当前目录。如果想自行修改 webui 文件，请先 `cd` 到方便存取的目录（例如 `/volume1/docker/transmission-next-vibemod`）再执行上面的命令；也可以把 `-v ./webui:/usr/share/nginx/html` 改成绝对路径，例如 `-v /volume1/docker/transmission-next-vibemod/webui:/usr/share/nginx/html`。
+> 群晖 NAS 注意：`docker run` 的 `-v` 挂载目录通常由 Docker 自动创建；如遇 `Bind mount failed`，先执行 `mkdir -p webui` 再运行。
 
 
 首次启动会自动将内置 WebUI 释放到 `./webui` 目录，之后可直接覆盖该目录中的文件实时生效。浏览器访问 `http://服务器地址:9095`，使用 Transmission RPC 的账户登录。如果 Transmission 没有启用认证，页面会自动进入。
