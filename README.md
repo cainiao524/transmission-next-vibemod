@@ -31,7 +31,7 @@ Transmission VibeMod 使用 React、Vite、Tailwind CSS 与 shadcn/ui 构建，�
 
 ## 安装方式一：Docker Hub 镜像（推荐）
 
-镜像地址：[lowsabishi/tranemission-next-vibemod](https://hub.docker.com/r/lowsabishi/tranemission-next-vibemod)（Docker Hub，首选），备用镜像为 [ghcr.io/cainiao524/tranemission-next-vibemod](https://github.com/users/cainiao524/packages/container/package/tranemission-next-vibemod)（GHCR），均支持 `linux/amd64` 与 `linux/arm64`。`latest` 跟随最新稳定镜像，也可以使用固定版本标签 `v1.2-baka9`。
+镜像地址：[lowsabishi/tranemission-next-vibemod](https://hub.docker.com/r/lowsabishi/tranemission-next-vibemod)（Docker Hub，首选），备用镜像为 [ghcr.io/cainiao524/tranemission-next-vibemod](https://github.com/users/cainiao524/packages/container/package/tranemission-next-vibemod)（GHCR），均支持 `linux/amd64` 与 `linux/arm64`。`latest` 跟随最新稳定镜像，也可以使用固定版本标签 `v1.4-baka9`。
 
 #### 写法 A（推荐）：`host.docker.internal` 自动指向宿主机
 
@@ -53,6 +53,8 @@ services:
       TRANSMISSION_URL: http://host.docker.internal:9091
     ports:
       - "9095:80"
+    volumes:
+      - ./webui:/usr/share/nginx/html
     restart: unless-stopped
 ```
 
@@ -64,6 +66,7 @@ docker compose up -d
 ```
 
 浏览器访问 `http://服务器地址:9095`，使用 Transmission RPC 的账户登录。如果 Transmission 没有启用认证，页面会自动进入。
+首次启动会自动将内置 WebUI 释放到 `./webui` 目录，之后可直接覆盖该目录中的文件实时生效，方便调试或自定义页面。挂载后 WebUI 文件以宿主机为准，重启容器不会覆盖你的修改。
 
 #### 写法 B：直接填写宿主机局域网 IP（原有写法）
 创建 `docker-compose.yml`：
@@ -77,6 +80,8 @@ services:
       TRANSMISSION_URL: http://192.168.1.10:9091
     ports:
       - "9095:80"
+    volumes:
+      - ./webui:/usr/share/nginx/html
     restart: unless-stopped
 ```
 
@@ -88,17 +93,18 @@ docker compose up -d
 ```
 
 浏览器访问 `http://服务器地址:9095`，使用 Transmission RPC 的账户登录。如果 Transmission 没有启用认证，页面会自动进入。
+首次启动会自动将内置 WebUI 释放到 `./webui` 目录，之后可直接覆盖该目录中的文件实时生效，方便调试或自定义页面。挂载后 WebUI 文件以宿主机为准，重启容器不会覆盖你的修改。
 
 如果两个服务位于同一个 Compose 网络，可以把地址写成 `http://transmission:9091`。需要锁定当前版本时，将镜像改为：
 
 ```yaml
-image: lowsabishi/tranemission-next-vibemod:v1.2-baka9
+image: lowsabishi/tranemission-next-vibemod:v1.4-baka9
 ```
 
 如果从 Docker Hub 拉取受限，可以把镜像地址换成 GHCR：
 
 ```yaml
-image: ghcr.io/cainiao524/tranemission-next-vibemod:v1.2-baka9
+image: ghcr.io/cainiao524/tranemission-next-vibemod:v1.4-baka9
 ```
 
 ## 安装方式二：发行版＋Nginx 反向代理
