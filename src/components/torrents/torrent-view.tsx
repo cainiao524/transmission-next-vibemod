@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react"
+import { useLocation } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -126,6 +127,13 @@ interface TorrentViewProps {
 
 export function TorrentView({ statusFilter, showStats = true }: TorrentViewProps) {
   const isMobile = useIsMobile()
+  const location = useLocation()
+  const [pageAnimationKey, setPageAnimationKey] = useState(0)
+
+  // 切换页面时重播入场动画（同一组件复用时 CSS 动画不会重新触发）
+  useEffect(() => {
+    setPageAnimationKey((key) => key + 1)
+  }, [location.pathname])
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const { showSpeedChart } = useAppSettings()
   const [selectedIds, setSelectedIds] = useState<TorrentId[]>([])
@@ -358,7 +366,7 @@ export function TorrentView({ statusFilter, showStats = true }: TorrentViewProps
   }, [fetchData, handleBatchAction, selectedIds.length, sortedTorrents])
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-500 ease-out">
+    <div key={pageAnimationKey} className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-500 ease-out">
       {showStats && stats && (
         <div className="p-2 md:p-2.5 bg-muted/20 backdrop-blur-xl rounded-[2.5rem] border border-muted/30 shadow-sm animate-in slide-in-from-top-4 duration-500 ease-out mb-2">
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
