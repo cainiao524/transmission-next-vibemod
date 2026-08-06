@@ -54,7 +54,7 @@ services:
 ## 镜像标签
 
 - `latest`：跟随最新稳定版本
-- `v1.5-baka9`：固定版本标签（支持 linux/amd64、linux/arm64）
+- `v1.6-baka9`：固定版本标签（支持 linux/amd64、linux/arm64）
 
 备用镜像（GHCR）：`ghcr.io/cainiao524/transmission-next-vibemod`
 
