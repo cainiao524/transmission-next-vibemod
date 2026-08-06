@@ -21,8 +21,13 @@ docker run -d \
   -p 9095:80 \
   -e TRANSMISSION_URL=http://host.docker.internal:9091 \
   --add-host host.docker.internal:host-gateway \   # Linux / NAS 需要；Docker Desktop 可删除
+  -v ./webui:/usr/share/nginx/html \
+  --restart unless-stopped \
   lowsabishi/transmission-next-vibemod:latest
 ```
+
+> 提示：`./webui` 会创建在执行命令时的当前目录。如果想自行修改 webui 文件，请先 `cd` 到方便存取的目录（例如 `/volume1/docker/transmission-next-vibemod`）再执行上面的命令；也可以把 `-v ./webui:/usr/share/nginx/html` 改成绝对路径，例如 `-v /volume1/docker/transmission-next-vibemod/webui:/usr/share/nginx/html`。
+
 
 ### docker-compose
 
