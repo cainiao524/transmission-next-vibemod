@@ -33,6 +33,39 @@ Transmission VibeMod 使用 React、Vite、Tailwind CSS 与 shadcn/ui 构建，�
 
 镜像地址：[lowsabishi/tranemission-next-vibemod](https://hub.docker.com/r/lowsabishi/tranemission-next-vibemod)（Docker Hub，首选），备用镜像为 [ghcr.io/cainiao524/tranemission-next-vibemod](https://github.com/users/cainiao524/packages/container/package/tranemission-next-vibemod)（GHCR），均支持 `linux/amd64` 与 `linux/arm64`。`latest` 跟随最新稳定镜像，也可以使用固定版本标签 `v1.2-baka9`。
 
+#### 写法 A（推荐）：`host.docker.internal` 自动指向宿主机
+
+`host.docker.internal` 由 Docker 自动解析到宿主机，无需关心服务器 IP，跨平台通用：
+
+- Docker Desktop（Windows / macOS）：直接可用，无需额外配置
+- Linux / 群晖等 NAS：Docker 20.10+ 需添加 `extra_hosts: ["host.docker.internal:host-gateway"]`
+
+创建 `docker-compose.yml`：
+
+```yaml
+services:
+  tranemission-next-vibemod:
+    image: lowsabishi/tranemission-next-vibemod:latest
+    container_name: tranemission-next-vibemod
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # Linux / NAS 需要；Docker Desktop 可删除
+    environment:
+      TRANSMISSION_URL: http://host.docker.internal:9091
+    ports:
+      - "40984:80"
+    restart: unless-stopped
+```
+
+启动：
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+浏览器访问 `http://服务器地址:40984`，使用 Transmission RPC 的账户登录。如果 Transmission 没有启用认证，页面会自动进入。
+
+#### 写法 B：直接填写宿主机局域网 IP（原有写法）
 创建 `docker-compose.yml`：
 
 ```yaml
