@@ -125,6 +125,35 @@ docker run -d \
 镜像内置 WebUI，开箱即用。浏览器访问 `http://服务器地址:9095`，使用 Transmission RPC 的账户登录。如果 Transmission 没有启用认证，页面会自动进入。
 
 
+
+#### WebUI 目录挂载与实时更新机制
+
+镜像默认内置 WebUI。如果你在 compose 中主动挂载 `./webui:/usr/share/nginx/html`，Nginx 会实时读取宿主机目录，替换文件后刷新即可生效，无需重建容器。该机制便于在 NAS 上直接解压发行版、随时切换或调试版本。
+
+主动挂载的 Compose 写法：
+
+```yaml
+services:
+  transmission-next-vibemod:
+    image: lowsabishi/transmission-next-vibemod:latest
+    container_name: transmission-next-vibemod
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # Linux / NAS 需要；Docker Desktop 可删除
+    environment:
+      TRANSMISSION_URL: http://host.docker.internal:9091
+    ports:
+      - "9095:80"
+    volumes:
+      - ./webui:/usr/share/nginx/html
+    restart: unless-stopped
+```
+
+需要注意：
+
+- 挂载目录会覆盖镜像内置页面，镜像升级后不会自动同步，需要手动更新 `webui` 目录中的文件。
+- `assets` 静态文件带一年缓存头，切换版本后请强制刷新浏览器（Ctrl+F5）。
+- 希望页面自动跟随镜像更新时，请在 compose 中移除 `volumes` 挂载，使用镜像内置 WebUI。
+
 ## 安装方式二：发行版＋Nginx 反向代理
 
 这是原来的推荐安装方式，现调整为次要方式。Nginx 同时提供发行版 WebUI 静态文件和 `/transmission/rpc` 反向代理，使页面与 RPC 保持同源，可以避免跨域问题，并由自定义登录页接管认证流程。
