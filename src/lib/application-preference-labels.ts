@@ -130,7 +130,6 @@ export function getPreferenceLabel(key: string, locale: "en" | "zh"): string {
 export function getPreferenceOptions(
   key: string,
   locale: "en" | "zh",
-  currentValue?: string | number,
 ): readonly PreferenceOption[] | undefined {
   return PREFERENCE_OPTIONS[key]?.map((option) => ({
     value: option.value,

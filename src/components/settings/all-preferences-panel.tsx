@@ -183,7 +183,7 @@ export function AllPreferencesPanel() {
   const renderEditor = (key: string, value: ApplicationPreferenceValue) => {
     const label = `${getPreferenceLabel(key, locale)} — ${key} (${getPreferenceValueType(value)})`
     const options = typeof value === "number" || typeof value === "string"
-      ? getPreferenceOptions(key, locale, value)
+      ? getPreferenceOptions(key, locale)
       : undefined
 
     if (typeof value === "boolean") {

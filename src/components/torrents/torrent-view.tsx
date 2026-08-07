@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react"
-import { useLocation } from "react-router-dom"
+import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -49,6 +48,7 @@ import { KeyboardShortcutsDialog } from "@/components/torrents/keyboard-shortcut
 import { AdvancedTorrentMenu } from "@/components/torrents/advanced-torrent-menu"
 import { SpeedHistoryChart } from "@/components/torrents/speed-history-chart"
 import { useAppSettings } from "@/lib/app-settings-context"
+import { exportTorrentFile } from "@/lib/torrent-export"
 import {
   createTorrentActionPlan,
   type BatchTorrentAction,
@@ -123,19 +123,13 @@ interface TorrentViewProps {
   title?: string
   statusFilter?: string
   showStats?: boolean
+  isActive?: boolean
 }
 
-export function TorrentView({ statusFilter, showStats = true }: TorrentViewProps) {
+export function TorrentView({ statusFilter, showStats = true, isActive = true }: TorrentViewProps) {
   const isMobile = useIsMobile()
-  const location = useLocation()
-  const [pageAnimationKey, setPageAnimationKey] = useState(0)
-
-  // 切换页面时重播入场动画（同一组件复用时 CSS 动画不会重新触发）
-  useEffect(() => {
-    setPageAnimationKey((key) => key + 1)
-  }, [location.pathname])
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
-  const { showSpeedChart } = useAppSettings()
+  const { showSpeedChart, animateTorrentSorting } = useAppSettings()
   const [selectedIds, setSelectedIds] = useState<TorrentId[]>([])
   const [selectionAnchorId, setSelectionAnchorId] = useState<TorrentId | null>(null)
   const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: "addedDate", direction: "desc" })
@@ -170,7 +164,13 @@ export function TorrentView({ statusFilter, showStats = true }: TorrentViewProps
     localStorage.setItem('torrent-page-size', pageSize.toString())
   }, [pageSize])
 
-  const { torrents, stats, freeSpace, fetchData } = useTorrentData(viewMode, visibleColumns)
+  const { torrents, stats, freeSpace, isInitialLoading, fetchData } = useTorrentData(viewMode, visibleColumns)
+  const wasActive = useRef(isActive)
+
+  useEffect(() => {
+    if (isActive && !wasActive.current) void fetchData()
+    wasActive.current = isActive
+  }, [fetchData, isActive])
 
   const {
     trackerFilter,
@@ -312,6 +312,22 @@ export function TorrentView({ statusFilter, showStats = true }: TorrentViewProps
     setSelectionAnchorId(id)
   }
 
+  const exportSelectedTorrents = useCallback(async () => {
+    let exported = 0
+    for (const id of selectedIds) {
+      const torrent = torrents.find((item) => item.id === id)
+      if (!torrent) continue
+      try {
+        await exportTorrentFile(id, torrent.name)
+        exported += 1
+      } catch {
+        // Continue exporting the remaining selected torrents.
+      }
+    }
+    if (exported === selectedIds.length) toast.success(t("export.batch_success", "已导出选中的种子文件"))
+    else toast.error(t("export.batch_partial", "部分种子文件无法导出"))
+  }, [selectedIds, t, torrents])
+
   const handleGlobalAction = async (action: "start" | "stop") => {
     try {
       if (action === "start") {
@@ -366,54 +382,87 @@ export function TorrentView({ statusFilter, showStats = true }: TorrentViewProps
   }, [fetchData, handleBatchAction, selectedIds.length, sortedTorrents])
 
   return (
-    <div key={pageAnimationKey} className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-500 ease-out">
-      {showStats && stats && (
-        <div className="p-2 md:p-2.5 bg-muted/20 backdrop-blur-xl rounded-[2.5rem] border border-muted/30 shadow-sm animate-in slide-in-from-top-4 duration-500 ease-out mb-2">
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              color="green"
-              icon={<ArrowDown className="h-5 w-5" />}
-              title={t('stats.download_speed')}
-              value={formatSpeed(totalDownloadSpeed)}
-              secondary1={<>{t('stats.session_badge')}: {formatSize(stats["current-stats"].downloadedBytes)}</>}
-              secondary2={<>{t('stats.history_badge')}: {formatSize(stats["cumulative-stats"].downloadedBytes)}</>}
-              isClicked={clickedCard === "download"}
-              onClick={() => setClickedCard(clickedCard === "download" ? null : "download")}
-            />
-            <StatCard
-              color="blue"
-              icon={<ArrowUp className="h-5 w-5" />}
-              title={t('stats.upload_speed')}
-              value={formatSpeed(totalUploadSpeed)}
-              secondary1={<>{t('stats.session_badge')}: {formatSize(stats["current-stats"].uploadedBytes)}</>}
-              secondary2={<>{t('stats.history_badge')}: {formatSize(stats["cumulative-stats"].uploadedBytes)}</>}
-              isClicked={clickedCard === "upload"}
-              onClick={() => setClickedCard(clickedCard === "upload" ? null : "upload")}
-            />
-            <StatCard
-              color="orange"
-              icon={<Activity className="h-5 w-5" />}
-              title={t('stats.active_torrents')}
-              value={stats.activeTorrentCount}
-              secondary1={<>{t('stats.total_tasks')}: {stats.torrentCount}</>}
-              secondary2={<>{t('stats.paused_tasks')}: {stats.pausedTorrentCount}</>}
-              isClicked={clickedCard === "activity"}
-              onClick={() => setClickedCard(clickedCard === "activity" ? null : "activity")}
-            />
-            <StatCard
-              color="purple"
-              icon={<Database className="h-5 w-5" />}
-              title={t('stats.free_space')}
-              value={freeSpace ? formatSize(freeSpace["size-bytes"]) : "---"}
-              secondary1={freeSpace ? (freeSpace.total_size > 0 ? <>{((freeSpace["size-bytes"] / freeSpace.total_size) * 100).toFixed(0)}% {t('stats.free_unit')}</> : <span className="truncate">{freeSpace.path}</span>) : null}
-              secondary2={freeSpace?.total_size ? <>{t('stats.total_label')}: {formatSize(freeSpace.total_size)}</> : null}
-              isClicked={clickedCard === "space"}
-              onClick={() => setClickedCard(clickedCard === "space" ? null : "space")}
-            />
-          </div>
+    <div key={statusFilter ?? "all"} className="flex flex-col gap-6">
+      {showStats && (
+        <div
+          key={stats && !isInitialLoading ? "stats-ready" : "stats-loading"}
+          className={cn(
+            "p-2 md:p-2.5 bg-muted/20 backdrop-blur-xl rounded-[2.5rem] border border-muted/30 shadow-sm mb-2",
+            stats && !isInitialLoading && "animate-in fade-in slide-in-from-top-3 duration-300 motion-reduce:animate-none"
+          )}
+          style={stats && !isInitialLoading ? { animationFillMode: "both" } : undefined}
+        >
+          {stats && !isInitialLoading ? (
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+              <div className="animate-in fade-in slide-in-from-top-1 duration-200 motion-reduce:animate-none" style={{ animationDelay: "0ms", animationFillMode: "both" }}>
+                <StatCard
+                  color="green"
+                  icon={<ArrowDown className="h-5 w-5" />}
+                  title={t('stats.download_speed')}
+                  value={formatSpeed(totalDownloadSpeed)}
+                  secondary1={<>{t('stats.session_badge')}: {formatSize(stats["current-stats"].downloadedBytes)}</>}
+                  secondary2={<>{t('stats.history_badge')}: {formatSize(stats["cumulative-stats"].downloadedBytes)}</>}
+                  isClicked={clickedCard === "download"}
+                  onClick={() => setClickedCard(clickedCard === "download" ? null : "download")}
+                />
+              </div>
+              <div className="animate-in fade-in slide-in-from-top-1 duration-200 motion-reduce:animate-none" style={{ animationDelay: "15ms", animationFillMode: "both" }}>
+                <StatCard
+                  color="blue"
+                  icon={<ArrowUp className="h-5 w-5" />}
+                  title={t('stats.upload_speed')}
+                  value={formatSpeed(totalUploadSpeed)}
+                  secondary1={<>{t('stats.session_badge')}: {formatSize(stats["current-stats"].uploadedBytes)}</>}
+                  secondary2={<>{t('stats.history_badge')}: {formatSize(stats["cumulative-stats"].uploadedBytes)}</>}
+                  isClicked={clickedCard === "upload"}
+                  onClick={() => setClickedCard(clickedCard === "upload" ? null : "upload")}
+                />
+              </div>
+              <div className="animate-in fade-in slide-in-from-top-1 duration-200 motion-reduce:animate-none" style={{ animationDelay: "30ms", animationFillMode: "both" }}>
+                <StatCard
+                  color="orange"
+                  icon={<Activity className="h-5 w-5" />}
+                  title={t('stats.active_torrents')}
+                  value={stats.activeTorrentCount}
+                  secondary1={<>{t('stats.total_tasks')}: {stats.torrentCount}</>}
+                  secondary2={<>{t('stats.paused_tasks')}: {stats.pausedTorrentCount}</>}
+                  isClicked={clickedCard === "activity"}
+                  onClick={() => setClickedCard(clickedCard === "activity" ? null : "activity")}
+                />
+              </div>
+              {freeSpace ? (
+                <div className="animate-in fade-in slide-in-from-top-1 duration-200 motion-reduce:animate-none" style={{ animationDelay: "45ms", animationFillMode: "both" }}>
+                  <StatCard
+                    color="purple"
+                    icon={<Database className="h-5 w-5" />}
+                    title={t('stats.free_space')}
+                    value={formatSize(freeSpace["size-bytes"])}
+                    secondary1={freeSpace.total_size > 0 ? <>{((freeSpace["size-bytes"] / freeSpace.total_size) * 100).toFixed(0)}% {t('stats.free_unit')}</> : <span className="truncate">{freeSpace.path}</span>}
+                    secondary2={freeSpace.total_size ? <>{t('stats.total_label')}: {formatSize(freeSpace.total_size)}</> : null}
+                    isClicked={clickedCard === "space"}
+                    onClick={() => setClickedCard(clickedCard === "space" ? null : "space")}
+                  />
+                </div>
+              ) : (
+                <div className="skeleton-gradient h-[72px] rounded-[2rem] bg-muted/30" />
+              )}
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4 animate-in fade-in duration-200 motion-reduce:animate-none">
+              {[0, 1, 2, 3].map((item) => (
+                <div key={item} className="skeleton-gradient h-20 rounded-[2rem] bg-muted/30" />
+              ))}
+            </div>
+          )}
         </div>
       )}
-      {showStats && stats && showSpeedChart && <SpeedHistoryChart stats={stats} />}
+      {showStats && showSpeedChart && (
+        stats && !isInitialLoading ? (
+          <div className="animate-in fade-in slide-in-from-top-2 duration-300 motion-reduce:animate-none" style={{ animationDelay: "35ms", animationFillMode: "both" }}><SpeedHistoryChart stats={stats} /></div>
+        ) : (
+          <div className="skeleton-gradient h-72 rounded-3xl border border-muted/30 bg-muted/20" />
+        )
+      )}
 
       <div className="flex flex-col gap-4">
         <TorrentToolbar
@@ -444,29 +493,42 @@ export function TorrentView({ statusFilter, showStats = true }: TorrentViewProps
           onGlobalAction={handleGlobalAction}
         />
 
-        {viewMode === "list" ? (
-          <TorrentListView
-            paginatedTorrents={paginatedTorrents}
-            visibleColumns={visibleColumns}
-            allColumns={allColumns}
-            selectedIds={selectedIds}
-            filteredCount={filteredTorrents.length}
-            sortConfig={sortConfig}
-            tableMinWidth={tableMinWidth}
-            locale={locale}
-            onToggleSelect={toggleSelect}
-            onToggleSelectAll={toggleSelectAll}
-            onSort={handleSort}
-            onSingleAction={handleSingleAction}
-            onAdvancedSuccess={fetchData}
-          />
+        {isInitialLoading ? (
+          <div className="overflow-hidden rounded-2xl bg-card/40">
+            <div className="h-12 bg-muted/40" />
+            {[0, 1, 2, 3, 4].map((item) => (
+              <div key={item} className="skeleton-gradient h-14 border-t border-muted/30 bg-muted/15" />
+            ))}
+          </div>
         ) : (
-          <TorrentGridView
-            paginatedTorrents={paginatedTorrents}
-            onSingleAction={handleSingleAction}
-            onAdvancedSuccess={fetchData}
-          />
+          <div className="animate-in fade-in slide-in-from-top-1 duration-200 motion-reduce:animate-none" style={{ animationDelay: "40ms", animationFillMode: "both" }}>
+            {viewMode === "list" ? (
+              <TorrentListView
+                paginatedTorrents={paginatedTorrents}
+                visibleColumns={visibleColumns}
+                allColumns={allColumns}
+                selectedIds={selectedIds}
+                filteredCount={filteredTorrents.length}
+                sortConfig={sortConfig}
+                animateSortTransitions={animateTorrentSorting}
+                tableMinWidth={tableMinWidth}
+                locale={locale}
+                onToggleSelect={toggleSelect}
+                onToggleSelectAll={toggleSelectAll}
+                onSort={handleSort}
+                onSingleAction={handleSingleAction}
+                onAdvancedSuccess={fetchData}
+              />
+            ) : (
+              <TorrentGridView
+                paginatedTorrents={paginatedTorrents}
+                onSingleAction={handleSingleAction}
+                onAdvancedSuccess={fetchData}
+              />
+            )}
+          </div>
         )}
+      </div>
 
         {sortedTorrents.length >= 50 && (
           <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-6 pb-10">
@@ -550,7 +612,6 @@ export function TorrentView({ statusFilter, showStats = true }: TorrentViewProps
             )}
           </div>
         )}
-      </div>
 
       {selectedIds.length > 0 && (
         <div className="selected-toolbar-in fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[calc(100%-2rem)] md:max-w-fit px-2 sm:px-0">
@@ -610,6 +671,7 @@ export function TorrentView({ statusFilter, showStats = true }: TorrentViewProps
                   <AdvancedTorrentMenu
                     ids={selectedIds}
                     onSuccess={fetchData}
+                    onExport={exportSelectedTorrents}
                     trigger={
                       <DropdownMenuItem onSelect={(event) => event.preventDefault()} className="rounded-xl py-2.5 px-3 cursor-pointer gap-3 font-medium focus:bg-muted">
                         <MoreVertical className="h-4 w-4 opacity-60" />
