@@ -5,6 +5,31 @@ import { useAppSettings } from "@/lib/app-settings-context"
 import { getRequiredRpcFields } from "@/lib/columns"
 import type { Torrent, SessionStats } from "@/lib/rpc-types"
 
+const TORRENT_DISPLAY_FIELDS = [
+  "id", "name", "status", "hashString", "totalSize", "size", "percentDone",
+  "rateDownload", "rateUpload", "eta", "downloadDir", "error", "errorString",
+  "uploadedEver", "downloadedEver", "uploadRatio", "labels", "queuePosition",
+  "isFinished", "isPrivate", "isStalled", "peersConnected", "peersSendingToUs",
+  "peersGettingFromUs", "category", "forceStart", "sequentialDownload",
+  "firstLastPiecePriority", "superSeeding", "autoManagement", "downloadPath",
+  "timeElapsed", "seedingTime", "wastedSize", "averageDownloadSpeed", "averageUploadSpeed",
+] as const
+
+function torrentsEqual(current: Torrent[], next: Torrent[]): boolean {
+  if (current.length !== next.length) return false
+  for (let index = 0; index < next.length; index++) {
+    const left = current[index]
+    const right = next[index]
+    for (const field of TORRENT_DISPLAY_FIELDS) {
+      const same = field === "labels"
+        ? JSON.stringify(left[field]) === JSON.stringify(right[field])
+        : left[field] === right[field]
+      if (!same) return false
+    }
+  }
+  return true
+}
+
 export function useTorrentData(
   viewMode: "list" | "grid",
   visibleColumns: string[]
@@ -24,7 +49,7 @@ export function useTorrentData(
         rpc.getSession()
       ])
 
-      setTorrents(torrentsData.torrents)
+      setTorrents((current) => torrentsEqual(current, torrentsData.torrents) ? current : torrentsData.torrents)
 
       let freeData = null
 
@@ -36,8 +61,14 @@ export function useTorrentData(
         }
       }
 
-      setStats(statsData)
-      setFreeSpace(freeData)
+      setStats((current) => {
+        if (current && JSON.stringify(current) === JSON.stringify(statsData)) return current
+        return statsData
+      })
+      setFreeSpace((current) => {
+        if (JSON.stringify(current) === JSON.stringify(freeData)) return current
+        return freeData
+      })
       setIsInitialLoading(false)
     } catch (err) {
       console.error("Failed to fetch Transmission data:", err)

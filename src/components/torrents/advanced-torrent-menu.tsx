@@ -137,10 +137,12 @@ export function AdvancedTorrentMenu({ ids, torrent, onSuccess, onExport, trigger
           )}
           <DropdownMenuSeparator />
           <DropdownMenuLabel>{t("advanced_menu.queue_position")}</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => void run(() => rpc.changeQueuePriority(ids, "top"), t("advanced_menu.moved_top"))}><ArrowUpToLine />{t("advanced_menu.top")}</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => void run(() => rpc.changeQueuePriority(ids, "up"), t("advanced_menu.moved_up"))}><ArrowUp />{t("advanced_menu.up")}</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => void run(() => rpc.changeQueuePriority(ids, "down"), t("advanced_menu.moved_down"))}><ArrowDown />{t("advanced_menu.down")}</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => void run(() => rpc.changeQueuePriority(ids, "bottom"), t("advanced_menu.moved_bottom"))}><ArrowDownToLine />{t("advanced_menu.bottom")}</DropdownMenuItem>
+          <div className="grid grid-cols-2 gap-1 px-1 pb-1">
+            <DropdownMenuItem className="gap-1.5 px-2 py-1.5 text-xs" onClick={() => void run(() => rpc.changeQueuePriority(ids, "top"), t("advanced_menu.moved_top"))}><ArrowUpToLine className="size-3.5" />{t("advanced_menu.top")}</DropdownMenuItem>
+            <DropdownMenuItem className="gap-1.5 px-2 py-1.5 text-xs" onClick={() => void run(() => rpc.changeQueuePriority(ids, "up"), t("advanced_menu.moved_up"))}><ArrowUp className="size-3.5" />{t("advanced_menu.up")}</DropdownMenuItem>
+            <DropdownMenuItem className="gap-1.5 px-2 py-1.5 text-xs" onClick={() => void run(() => rpc.changeQueuePriority(ids, "down"), t("advanced_menu.moved_down"))}><ArrowDown className="size-3.5" />{t("advanced_menu.down")}</DropdownMenuItem>
+            <DropdownMenuItem className="gap-1.5 px-2 py-1.5 text-xs" onClick={() => void run(() => rpc.changeQueuePriority(ids, "bottom"), t("advanced_menu.moved_bottom"))}><ArrowDownToLine className="size-3.5" />{t("advanced_menu.bottom")}</DropdownMenuItem>
+          </div>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setPathOpen(true)}><FolderCog />{t("advanced_menu.edit_paths")}</DropdownMenuItem>
           <DropdownMenuItem disabled={!onExport && (!torrent || ids.length !== 1)} onClick={() => void exportTorrents()}><Upload />{t("export.action", "导出 .torrent 文件")}</DropdownMenuItem>
