@@ -3,32 +3,8 @@ import { useState, useCallback, useEffect } from "react"
 import { rpc } from "@/lib/rpc-client"
 import { useAppSettings } from "@/lib/app-settings-context"
 import { getRequiredRpcFields } from "@/lib/columns"
+import { reuseTorrentReferences } from "@/lib/torrent-reference"
 import type { Torrent, SessionStats } from "@/lib/rpc-types"
-
-const TORRENT_DISPLAY_FIELDS = [
-  "id", "name", "status", "hashString", "totalSize", "size", "percentDone",
-  "rateDownload", "rateUpload", "eta", "downloadDir", "error", "errorString",
-  "uploadedEver", "downloadedEver", "uploadRatio", "labels", "queuePosition",
-  "isFinished", "isPrivate", "isStalled", "peersConnected", "peersSendingToUs",
-  "peersGettingFromUs", "category", "forceStart", "sequentialDownload",
-  "firstLastPiecePriority", "superSeeding", "autoManagement", "downloadPath",
-  "timeElapsed", "seedingTime", "wastedSize", "averageDownloadSpeed", "averageUploadSpeed",
-] as const
-
-function torrentsEqual(current: Torrent[], next: Torrent[]): boolean {
-  if (current.length !== next.length) return false
-  for (let index = 0; index < next.length; index++) {
-    const left = current[index]
-    const right = next[index]
-    for (const field of TORRENT_DISPLAY_FIELDS) {
-      const same = field === "labels"
-        ? JSON.stringify(left[field]) === JSON.stringify(right[field])
-        : left[field] === right[field]
-      if (!same) return false
-    }
-  }
-  return true
-}
 
 export function useTorrentData(
   viewMode: "list" | "grid",
@@ -49,7 +25,7 @@ export function useTorrentData(
         rpc.getSession()
       ])
 
-      setTorrents((current) => torrentsEqual(current, torrentsData.torrents) ? current : torrentsData.torrents)
+      setTorrents((current) => reuseTorrentReferences(current, torrentsData.torrents))
 
       let freeData = null
 
