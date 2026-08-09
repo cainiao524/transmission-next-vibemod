@@ -25,6 +25,7 @@ import type { Torrent, TorrentId } from "@/lib/rpc-types"
 import { useI18n } from "@/lib/i18n-context"
 import { AdvancedTorrentMenu } from "@/components/torrents/advanced-torrent-menu"
 import { getTorrentProgressColor } from "@/lib/torrent-progress"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 type SortKey =
   | "name"
@@ -80,6 +81,7 @@ interface TorrentRowProps {
   onSingleAction: (id: TorrentId, action: "start" | "stop" | "remove") => void
   onOpenEdit: (torrent: Torrent) => void
   onAdvancedSuccess?: () => void
+  isMobile: boolean
 }
 
 function rowPropsEqual(prev: TorrentRowProps, next: TorrentRowProps): boolean {
@@ -92,6 +94,7 @@ function rowPropsEqual(prev: TorrentRowProps, next: TorrentRowProps): boolean {
     && prev.onSingleAction === next.onSingleAction
     && prev.onOpenEdit === next.onOpenEdit
     && prev.onAdvancedSuccess === next.onAdvancedSuccess
+    && prev.isMobile === next.isMobile
 }
 
 const TorrentRow = memo(function TorrentRow({
@@ -106,6 +109,7 @@ const TorrentRow = memo(function TorrentRow({
   onSingleAction,
   onOpenEdit,
   onAdvancedSuccess,
+  isMobile,
 }: TorrentRowProps) {
   const { t } = useI18n()
   const [animationDelay] = useState(() => Math.min(initialIndex, 6) * 12)
@@ -209,7 +213,7 @@ const TorrentRow = memo(function TorrentRow({
       )}
       style={shouldAnimateEntrance ? { animationDelay: `${animationDelay}ms`, animationFillMode: "both" } : undefined}
     >
-      <TableCell className="pl-6">
+      <TableCell className="pl-3 md:pl-6">
         <div
           className="cursor-pointer text-muted-foreground hover:text-primary transition-colors select-none"
           onMouseDown={(event) => event.preventDefault()}
@@ -223,25 +227,43 @@ const TorrentRow = memo(function TorrentRow({
         </div>
       </TableCell>
       {columns.map(renderCell)}
-      <TableCell className="w-[170px] pr-6">
-        <div className="flex items-center justify-center gap-1">
-          <AdvancedTorrentMenu ids={[torrent.id]} torrent={torrent} onSuccess={onAdvancedSuccess} />
-          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors" onClick={() => onOpenEdit(torrent)}>
-            <Pencil className="h-4 w-4" />
-          </Button>
-          {torrent.status !== 0 ? (
-            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-orange-500/10 hover:text-orange-500 transition-colors" onClick={() => onSingleAction(torrent.id, "stop")}>
-              <Pause className="h-4 w-4" />
+      <TableCell className={cn(isMobile ? "sticky right-0 z-20 w-14 min-w-14 bg-card px-1" : "w-[170px] pr-6")}>
+        {isMobile ? (
+          <div className="flex items-center justify-center">
+            <AdvancedTorrentMenu
+              ids={[torrent.id]}
+              torrent={torrent}
+              onSuccess={onAdvancedSuccess}
+              primaryActions
+              onEditAction={() => onOpenEdit(torrent)}
+              onPrimaryAction={(action) => onSingleAction(torrent.id, action)}
+              trigger={(
+                <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl hover:bg-primary/10 hover:text-primary" aria-label={t("common.actions")}>
+                  <span className="text-lg leading-none">•••</span>
+                </Button>
+              )}
+            />
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-1">
+            <AdvancedTorrentMenu ids={[torrent.id]} torrent={torrent} onSuccess={onAdvancedSuccess} />
+            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors" onClick={() => onOpenEdit(torrent)} aria-label={t("common.edit_torrent")}>
+              <Pencil className="h-4 w-4" />
             </Button>
-          ) : (
-            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-green-500/10 hover:text-green-500 transition-colors" onClick={() => onSingleAction(torrent.id, "start")}>
-              <Play className="h-4 w-4" />
+            {torrent.status !== 0 ? (
+              <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-orange-500/10 hover:text-orange-500 transition-colors" onClick={() => onSingleAction(torrent.id, "stop")} aria-label={t("common.pause", "暂停")}>
+                <Pause className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-green-500/10 hover:text-green-500 transition-colors" onClick={() => onSingleAction(torrent.id, "start")} aria-label={t("common.resume", "开始")}>
+                <Play className="h-4 w-4" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={() => onSingleAction(torrent.id, "remove")} aria-label={t("common.remove", "删除")}>
+              <Trash2 className="h-4 w-4" />
             </Button>
-          )}
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={() => onSingleAction(torrent.id, "remove")}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+          </div>
+        )}
       </TableCell>
     </TableRow>
   )
@@ -267,6 +289,7 @@ export function TorrentListView({
   onAdvancedSuccess,
 }: TorrentListViewProps) {
   const { t } = useI18n()
+  const isMobile = useIsMobile()
   const [editingTorrent, setEditingTorrent] = useState<Torrent | null>(null)
   const orderedVisibleColumns = useMemo(
     () => visibleColumns
@@ -368,10 +391,10 @@ export function TorrentListView({
   return (
     <Card className="shadow-md border-none overflow-hidden py-0">
       <CardContent className="p-0 overflow-hidden">
-        <Table className="table-fixed" style={{ minWidth: `${tableMinWidth}px` }}>
+        <Table className="table-fixed" style={{ minWidth: `${tableMinWidth - (isMobile ? 114 : 0)}px` }}>
           <TableHeader className="bg-muted/50">
             <TableRow className="hover:bg-transparent border-none">
-              <TableHead className="w-[50px] pl-6 h-12">
+              <TableHead className="w-[50px] pl-3 md:pl-6 h-12">
                 <div
                   className="cursor-pointer text-muted-foreground hover:text-primary transition-colors"
                   onClick={onToggleSelectAll}
@@ -388,7 +411,9 @@ export function TorrentListView({
                 </div>
               </TableHead>
               {orderedVisibleColumns.map(renderHeader)}
-              <TableHead className="text-center w-[170px] h-12 pr-6">{t('common.actions')}</TableHead>
+              <TableHead className={cn("h-12 text-center", isMobile ? "sticky right-0 z-30 w-14 min-w-14 bg-[color-mix(in_oklab,var(--muted)_50%,var(--card))] px-1" : "w-[170px] pr-6")}>
+                <span className={cn(isMobile && "sr-only")}>{t('common.actions')}</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody ref={tableBodyRef} data-virtualized={shouldVirtualize ? "true" : "false"}>
@@ -413,6 +438,7 @@ export function TorrentListView({
                 onSingleAction={onSingleAction}
                 onOpenEdit={openEdit}
                 onAdvancedSuccess={onAdvancedSuccess}
+                isMobile={isMobile}
               />
               )
             })}
