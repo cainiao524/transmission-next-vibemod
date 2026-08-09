@@ -129,7 +129,7 @@ interface TorrentViewProps {
 export function TorrentView({ statusFilter, showStats = true, isActive = true }: TorrentViewProps) {
   const isMobile = useIsMobile()
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
-  const { showSpeedChart, animateTorrentSorting } = useAppSettings()
+  const { showSpeedChart, animateTorrentSorting, torrentListDensity } = useAppSettings()
   const [selectedIds, setSelectedIds] = useState<TorrentId[]>([])
   const [selectionAnchorId, setSelectionAnchorId] = useState<TorrentId | null>(null)
   const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: "addedDate", direction: "desc" })
@@ -158,6 +158,10 @@ export function TorrentView({ statusFilter, showStats = true, isActive = true }:
     hiddenColumns,
     orderedVisibleColumnConfigs,
     tableMinWidth,
+    columnWidths,
+    setColumnWidth,
+    actionsColumnPinned,
+    setActionsColumnPinned,
   } = useColumnManager()
 
   useEffect(() => {
@@ -494,9 +498,11 @@ export function TorrentView({ statusFilter, showStats = true, isActive = true }:
           toggleColumn={toggleColumn}
           resetVisibleColumns={resetVisibleColumns}
           handleColumnDragEnd={handleColumnDragEnd}
+          actionsColumnPinned={actionsColumnPinned}
+          onActionsColumnPinnedChange={setActionsColumnPinned}
           onBatchReplaceOpen={() => setIsBatchReplaceOpen(true)}
-            onBatchMoveOpen={() => setIsBatchMoveOpen(true)}
-            onShortcutsOpen={() => setIsShortcutsOpen(true)}
+          onBatchMoveOpen={() => setIsBatchMoveOpen(true)}
+          onShortcutsOpen={() => setIsShortcutsOpen(true)}
           fetchData={fetchData}
           onGlobalAction={handleGlobalAction}
         />
@@ -523,10 +529,14 @@ export function TorrentView({ statusFilter, showStats = true, isActive = true }:
                 sortConfig={sortConfig}
                 animateSortTransitions={animateTorrentSorting}
                 tableMinWidth={tableMinWidth}
+                columnWidths={columnWidths}
+                actionsColumnPinned={actionsColumnPinned}
+                density={torrentListDensity}
                 locale={locale}
                 onToggleSelect={toggleSelect}
                 onToggleSelectAll={toggleSelectAll}
                 onSort={handleSort}
+                onColumnWidthChange={setColumnWidth}
                 onSingleAction={handleSingleAction}
                 onAdvancedSuccess={fetchData}
               />
