@@ -71,6 +71,11 @@ jobs:
             ghcr.io/cainiao524/transmission-next-vibemod:latest
             ghcr.io/cainiao524/transmission-next-vibemod:${{ steps.version.outputs.clean-tag }}
 
+  update-description:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/V')
+    needs: build
+    uses: ./.github/workflows/update-dockerhub-description.yml
+    secrets: inherit
 
   export:
     needs: build
