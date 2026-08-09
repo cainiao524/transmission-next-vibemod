@@ -118,7 +118,12 @@ function mapTorrent(raw: JsonRecord): Torrent {
   const left = numberValue(raw, "leftUntilDone")
   const desired = numberValue(raw, "desiredAvailable")
   const trackers = Array.isArray(raw.trackers) ? (raw.trackers as JsonRecord[]).map(mapTracker) : []
-  const trackerStats = Array.isArray(raw.trackerStats) ? (raw.trackerStats as JsonRecord[]).map(mapTrackerStat) : []
+  const rawTrackerStats = Array.isArray(raw.trackerStats) ? raw.trackerStats as JsonRecord[] : []
+  const trackerStats = rawTrackerStats.map(mapTrackerStat)
+  const lastSeenComplete = rawTrackerStats.reduce((latest, tracker) => {
+    if (numberValue(tracker, "seederCount") <= 0) return latest
+    return Math.max(latest, numberValue(tracker, "lastScrapeTime"), numberValue(tracker, "lastAnnounceTime"))
+  }, 0)
 
   return {
     id: stringValue(raw, "hashString", String(raw.id ?? "")),
@@ -139,6 +144,7 @@ function mapTorrent(raw: JsonRecord): Torrent {
     errorString: stringValue(raw, "errorString"),
     uploadedEver: numberValue(raw, "uploadedEver"),
     downloadedEver: numberValue(raw, "downloadedEver"),
+    amountLeft: left,
     uploadRatio: numberValue(raw, "uploadRatio"),
     labels: Array.isArray(raw.labels) ? raw.labels.map(String) : [],
     queuePosition: numberValue(raw, "queuePosition"),
@@ -205,15 +211,15 @@ function mapTorrent(raw: JsonRecord): Torrent {
     averageDownloadSpeed: 0,
     averageUploadSpeed: 0,
     wastedSize: 0,
-    seedsTotal: numberValue(raw, "peersSendingToUs"),
-    peersTotal: numberValue(raw, "peersConnected"),
+    seedsTotal: trackerStats.reduce((maximum, tracker) => Math.max(maximum, tracker.seederCount), 0),
+    peersTotal: trackerStats.reduce((maximum, tracker) => Math.max(maximum, tracker.leecherCount), 0),
     popularity: 0,
     availability: left <= 0 ? 1 : Math.min(1, desired / left),
     nextAnnounce: 0,
     piecesCount: numberValue(raw, "pieceCount"),
     piecesHave: pieceSize > 0 ? Math.floor(haveBytes / pieceSize) : 0,
     pieceSize,
-    lastSeenComplete: numberValue(raw, "activityDate"),
+    lastSeenComplete,
   }
 }
 
@@ -293,6 +299,8 @@ class TransmissionRPC {
       if (field === "connectionsLimit") requested.add("peer-limit")
       if (["piecesCount", "piecesHave"].includes(field)) ["pieceCount", "pieceSize", "haveValid", "haveUnchecked"].forEach((item) => requested.add(item))
       if (field === "availability") ["desiredAvailable", "leftUntilDone"].forEach((item) => requested.add(item))
+      if (field === "amountLeft") requested.add("leftUntilDone")
+      if (["seedsTotal", "peersTotal", "lastSeenComplete"].includes(field)) requested.add("trackerStats")
       if (field === "size") requested.add("sizeWhenDone")
     })
     const args: JsonRecord = { fields: [...requested] }
