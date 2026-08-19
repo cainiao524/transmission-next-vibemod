@@ -98,6 +98,17 @@ describe("Transmission RPC 适配层", () => {
     ])
   })
 
+  test("未请求文件字段时保持 files 未定义", async () => {
+    vi.mocked(fetch).mockResolvedValue(success({
+      torrents: [{ id: 9, name: "示例", hashString: "abc", status: 4 }],
+    }))
+    const { rpc } = await import("./rpc-client")
+
+    const result = await rpc.getTorrents([])
+
+    expect(result.torrents[0].files).toBeUndefined()
+  })
+
   test("文件不下载优先级映射到 files-unwanted", async () => {
     vi.mocked(fetch).mockResolvedValue(success())
     const { rpc } = await import("./rpc-client")

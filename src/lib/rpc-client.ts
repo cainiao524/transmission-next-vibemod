@@ -110,7 +110,7 @@ function mapTrackerStat(raw: JsonRecord): TrackerStat {
 }
 
 function mapTorrent(raw: JsonRecord): Torrent {
-  const files = Array.isArray(raw.files) ? raw.files as JsonRecord[] : []
+  const files = Array.isArray(raw.files) ? raw.files as JsonRecord[] : undefined
   const fileStats = Array.isArray(raw.fileStats) ? raw.fileStats as JsonRecord[] : []
   const peers = Array.isArray(raw.peers) ? raw.peers as JsonRecord[] : []
   const pieceSize = numberValue(raw, "pieceSize")
@@ -153,7 +153,7 @@ function mapTorrent(raw: JsonRecord): Torrent {
     isStalled: booleanValue(raw, "isStalled"),
     trackers,
     trackerStats,
-    files: files.map((file, index) => {
+    files: files?.map((file, index) => {
       const stats = fileStats[index] ?? {}
       const wanted = booleanValue(stats, "wanted", true)
       const priority = numberValue(stats, "priority")
