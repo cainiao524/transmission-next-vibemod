@@ -11,7 +11,7 @@ const fail = (message) => {
   process.exitCode = 1
 }
 
-if (!/^\d+\.\d+\.\d+$/.test(version)) {
+if (!/^\d+\.\d+\.\d+(?:-\d+)?$/.test(version)) {
   fail(`package.json 中的版本格式无效：${version}`)
 }
 
@@ -21,7 +21,7 @@ if (!config.includes(expectedDisplayVersion)) {
   fail(`APP_CONFIG.version 应为 v${version}-${displaySuffix}`)
 }
 
-const concreteTagPattern = new RegExp(`v\\d+\\.\\d+\\.\\d+-${suffix}`, "g")
+const concreteTagPattern = new RegExp(`v\\d+\\.\\d+\\.\\d+(?:-\\d+)?-${suffix}`, "g")
 const dockerHub = readFileSync("DOCKERHUB.md", "utf8")
 const placeholderCount = dockerHub.split(placeholder).length - 1
 if (placeholderCount !== 1) {
