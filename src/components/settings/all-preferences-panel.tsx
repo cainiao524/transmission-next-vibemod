@@ -14,12 +14,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {
+  comparePreferenceKeys,
   getPreferenceCategory,
   getPreferenceChanges,
+  getPreferenceDependencyKeys,
   getPreferenceValueType,
+  isPreferenceApplicable,
   isConnectionCriticalPreference,
+  isPreferenceDependencyMet,
   isSensitivePreference,
   isStructuredPreference,
+  isWritablePreference,
   PREFERENCE_CATEGORY_ORDER,
   type PreferenceCategory,
 } from "@/lib/application-preferences"
@@ -55,7 +60,7 @@ export function AllPreferencesPanel() {
   const [parseErrors, setParseErrors] = useState<Record<string, string>>({})
   const [query, setQuery] = useState("")
   const [changedOnly, setChangedOnly] = useState(false)
-  const [activeCategory, setActiveCategory] = useState<PreferenceCategory>("behavior")
+  const [activeCategory, setActiveCategory] = useState<PreferenceCategory>("torrents")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -68,7 +73,7 @@ export function AllPreferencesPanel() {
       setStructuredDrafts(createStructuredDrafts(data))
       setParseErrors({})
     } catch (error) {
-      console.error("Failed to fetch qBittorrent preferences:", error)
+      console.error("Failed to fetch Transmission preferences:", error)
       toast.error(t("settings.all.load_failed", "无法读取全部偏好设置"))
     } finally {
       setLoading(false)
@@ -101,7 +106,7 @@ export function AllPreferencesPanel() {
           || t(categoryTranslationKey(category), category).toLowerCase().includes(normalizedQuery)
           || String(value).toLowerCase().includes(normalizedQuery)
       })
-      .sort(([left], [right]) => left.localeCompare(right))
+      .sort(([left], [right]) => comparePreferenceKeys(left, right))
   }, [changedKeys, changedOnly, draft, locale, preferences, query, t])
 
   const categoryPages = useMemo(() => PREFERENCE_CATEGORY_ORDER
@@ -168,11 +173,11 @@ export function AllPreferencesPanel() {
       })
       await fetchPreferences()
     } catch (error) {
-      console.error("Failed to save qBittorrent preferences:", error)
+      console.error("Failed to save Transmission preferences:", error)
       toast.error(t("settings.all.save_failed", "保存偏好设置失败"), {
         description: t(
           "settings.all.save_failed_desc",
-          "连接可能已被 WebUI 或网络设置更改中断，请检查 qBittorrent。",
+          "连接可能已被 RPC 或网络设置更改中断，请检查 Transmission。",
         ),
       })
     } finally {
@@ -180,10 +185,10 @@ export function AllPreferencesPanel() {
     }
   }
 
-  const renderEditor = (key: string, value: ApplicationPreferenceValue) => {
+  const renderEditor = (key: string, value: ApplicationPreferenceValue, disabled = false) => {
     const label = `${getPreferenceLabel(key, locale)} — ${key} (${getPreferenceValueType(value)})`
     const options = typeof value === "number" || typeof value === "string"
-      ? getPreferenceOptions(key, locale)
+      ? getPreferenceOptions(key, locale, value)
       : undefined
 
     if (typeof value === "boolean") {
@@ -193,9 +198,10 @@ export function AllPreferencesPanel() {
           role="switch"
           aria-checked={value}
           aria-label={label}
+          disabled={disabled}
           onClick={() => updatePreference(key, !value)}
           className={cn(
-            "relative h-7 w-12 shrink-0 rounded-full ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2",
+            "relative h-7 w-12 shrink-0 rounded-full ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45",
             value
               ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.45)]"
               : "bg-muted ring-1 ring-border",
@@ -216,6 +222,7 @@ export function AllPreferencesPanel() {
       return (
         <select
           aria-label={label}
+          disabled={disabled}
           value={String(value)}
           onChange={(event) => {
             const next = options.find((option) => String(option.value) === event.target.value)
@@ -237,6 +244,7 @@ export function AllPreferencesPanel() {
           aria-label={label}
           type="number"
           step="any"
+          disabled={disabled}
           value={value}
           onChange={(event) => {
             const next = Number(event.target.value)
@@ -252,6 +260,7 @@ export function AllPreferencesPanel() {
         <div className="space-y-2">
           <Textarea
             aria-label={label}
+            disabled={disabled}
             value={structuredDrafts[key] ?? formatStructuredValue(value)}
             onChange={(event) => updateStructuredPreference(key, event.target.value)}
             className={cn(
@@ -271,6 +280,7 @@ export function AllPreferencesPanel() {
       return (
         <Textarea
           aria-label={label}
+          disabled={disabled}
           value={stringValue}
           placeholder={value === null ? "null" : undefined}
           onChange={(event) => updatePreference(key, event.target.value)}
@@ -283,6 +293,7 @@ export function AllPreferencesPanel() {
       <Input
         aria-label={label}
         type={isSensitivePreference(key) ? "password" : "text"}
+        disabled={disabled}
         value={stringValue}
         placeholder={value === null ? "null" : undefined}
         autoComplete="off"
@@ -298,7 +309,7 @@ export function AllPreferencesPanel() {
         <CardContent className="flex min-h-72 items-center justify-center">
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <RefreshCw className="h-4 w-4 animate-spin" />
-            {t("settings.all.loading", "正在读取 qBittorrent 全部偏好设置…")}
+            {t("settings.all.loading", "正在读取 Transmission 全部偏好设置…")}
           </div>
         </CardContent>
       </Card>
@@ -313,12 +324,12 @@ export function AllPreferencesPanel() {
             <div>
               <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                 <SlidersHorizontal className="h-5 w-5 text-primary" />
-                {t("settings.all.title", "全部 qBittorrent 偏好设置")}
+                {t("settings.all.title", "全部 Transmission 会话设置")}
               </CardTitle>
               <CardDescription className="mt-2 max-w-3xl text-xs leading-relaxed md:text-sm">
                 {t(
                   "settings.all.desc",
-                  "按服务器实际返回值展示所有配置项；字段数量会随 qBittorrent 版本和平台变化。",
+                  "按服务器实际返回值展示所有会话配置项；字段数量会随 Transmission 版本和平台变化。",
                 )}
               </CardDescription>
             </div>
@@ -340,7 +351,7 @@ export function AllPreferencesPanel() {
               <p>
                 {t(
                   "settings.all.warning",
-                  "修改 WebUI 地址、端口、认证、HTTPS、代理或备用界面路径可能立即中断当前连接。保存前请确认仍有其他方式访问 qBittorrent。",
+                  "修改 RPC、网络或认证设置可能立即中断当前连接。保存前请确认仍有其他方式访问 Transmission。",
                 )}
               </p>
             </div>
@@ -439,34 +450,61 @@ export function AllPreferencesPanel() {
 
           {activeEntries.length > 0 ? (
             <CardContent className="divide-y divide-muted/30 p-0">
-              {activeEntries.map(([key, value]) => (
-                <div
-                  key={key}
-                  className={cn(
-                    "grid gap-4 p-4 transition-colors md:grid-cols-[minmax(220px,0.8fr)_minmax(280px,1.2fr)] md:items-start md:p-5",
-                    changedKeys.has(key) && "bg-primary/[0.04]",
-                  )}
-                >
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-foreground">
-                        {getPreferenceLabel(key, locale)}
-                      </span>
-                      {changedKeys.has(key) && (
-                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-bold text-primary">
-                          {t("settings.all.changed", "已更改")}
+              {activeEntries.map(([key, value]) => {
+                const writable = isWritablePreference(key)
+                const dependencyKeys = getPreferenceDependencyKeys(key)
+                const applicable = isPreferenceApplicable(key, draft)
+                const dependencyLabels = dependencyKeys
+                  .filter((dependency) => !isPreferenceDependencyMet(dependency, draft))
+                  .map((dependency) => getPreferenceLabel(dependency, locale))
+                  .join(locale === "zh" ? "、" : ", ")
+
+                return (
+                  <div
+                    key={key}
+                    className={cn(
+                      "grid gap-4 p-4 transition-colors md:grid-cols-[minmax(220px,0.8fr)_minmax(280px,1.2fr)] md:items-start md:p-5",
+                      changedKeys.has(key) && "bg-primary/[0.04]",
+                      (!writable || !applicable) && "bg-muted/[0.18]",
+                    )}
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground">
+                          {getPreferenceLabel(key, locale)}
                         </span>
+                        {changedKeys.has(key) && (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-bold text-primary">
+                            {t("settings.all.changed", "已更改")}
+                          </span>
+                        )}
+                        {!writable && (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[9px] font-bold text-muted-foreground">
+                            {t("settings.all.read_only", "只读")}
+                          </span>
+                        )}
+                        {writable && !applicable && (
+                          <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold text-amber-700 dark:text-amber-300">
+                            {t("settings.all.unavailable", "暂不可用")}
+                          </span>
+                        )}
+                      </div>
+                      <code className="block break-all text-[10px] text-muted-foreground/80">{key}</code>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        {getPreferenceValueType(value)}
+                        {isSensitivePreference(key) && ` · ${t("settings.all.sensitive", "敏感字段")}`}
+                      </p>
+                      {writable && !applicable && dependencyLabels && (
+                        <p className="text-[10px] leading-relaxed text-amber-700 dark:text-amber-300">
+                          {t("settings.all.requires", "需先启用：{{settings}}")
+                            .replace("{{settings}}", dependencyLabels)}
+                        </p>
                       )}
                     </div>
-                    <code className="block break-all text-[10px] text-muted-foreground/80">{key}</code>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      {getPreferenceValueType(value)}
-                      {isSensitivePreference(key) && ` · ${t("settings.all.sensitive", "敏感字段")}`}
-                    </p>
+                    {renderEditor(key, value, !writable || !applicable)}
                   </div>
-                  {renderEditor(key, value)}
-                </div>
-              ))}
+                )
+              })}
             </CardContent>
           ) : (
             <CardContent className="flex min-h-36 items-center justify-center text-sm text-muted-foreground">
@@ -481,7 +519,7 @@ export function AllPreferencesPanel() {
           {hasParseErrors
             ? t("settings.all.fix_json", "请先修复无效的 JSON 字段。")
             : hasCriticalChanges
-              ? t("settings.all.critical_changes", "包含可能中断连接的 WebUI 或代理设置。")
+              ? t("settings.all.critical_changes", "包含可能中断连接的 RPC 或网络设置。")
               : t("settings.all.pending", "待保存 {{count}} 项更改。")
                   .replace("{{count}}", String(changedKeys.size))}
         </div>

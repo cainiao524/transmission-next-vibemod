@@ -15,6 +15,7 @@ import type {
   Tracker,
   TrackerStat,
 } from "./rpc-types"
+import { isWritablePreference } from "./application-preferences"
 import { isPrivateNetworkHost } from "./network"
 
 type JsonRecord = Record<string, unknown>
@@ -52,16 +53,6 @@ const OPTIONAL_FIELDS = new Set([
   "labels", "trackers", "trackerStats", "files", "fileStats", "peers", "comment", "creator", "dateCreated",
   "trackerList", "secondsDownloading", "secondsSeeding", "peer-limit", "pieceCount", "pieceSize", "haveValid",
   "haveUnchecked", "desiredAvailable", "leftUntilDone", "metadataPercentComplete", "size",
-])
-
-const WRITABLE_SESSION_FIELDS = new Set([
-  "alt-speed-down", "alt-speed-enabled", "alt-speed-up", "alt-speed-time-begin", "alt-speed-time-enabled",
-  "alt-speed-time-end", "alt-speed-time-day", "download-dir", "download-queue-enabled", "download-queue-size",
-  "encryption", "peer-limit-global", "peer-limit-per-torrent", "peer-port", "peer-port-random-on-start",
-  "port-forwarding-enabled", "rename-partial-files", "seed-queue-enabled", "seed-queue-size", "speed-limit-down",
-  "speed-limit-down-enabled", "speed-limit-up", "speed-limit-up-enabled", "start-added-torrents",
-  "trash-original-torrent-files", "dht-enabled", "pex-enabled", "lpd-enabled", "utp-enabled", "blocklist-enabled",
-  "blocklist-url", "incomplete-dir", "incomplete-dir-enabled",
 ])
 
 function numberValue(record: JsonRecord, key: string, fallback = 0): number {
@@ -351,12 +342,12 @@ class TransmissionRPC {
   }
 
   async setApplicationPreferences(preferences: Partial<ApplicationPreferences>): Promise<void> {
-    const values = Object.fromEntries(Object.entries(preferences).filter(([key]) => WRITABLE_SESSION_FIELDS.has(key)))
+    const values = Object.fromEntries(Object.entries(preferences).filter(([key]) => isWritablePreference(key)))
     if (Object.keys(values).length) await this.request("session-set", values)
   }
 
   async setSession(args: Partial<Session>) {
-    const values = Object.fromEntries(Object.entries(args).filter(([key]) => WRITABLE_SESSION_FIELDS.has(key)))
+    const values = Object.fromEntries(Object.entries(args).filter(([key]) => isWritablePreference(key)))
     if (Object.keys(values).length) await this.request("session-set", values)
     return {}
   }
