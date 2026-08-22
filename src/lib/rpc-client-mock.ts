@@ -1,75 +1,31 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { ApplicationPreferences, Session, TorrentFilePriority, TorrentPieceState } from "./rpc-types";
+import { isWritablePreference } from "./application-preferences";
 import { MOCK_SESSION, MOCK_STATS, MOCK_TORRENTS } from "./mock-data";
 
 export const TRANSMISSION_AUTH_LOGOUT_EVENT = "transmission-auth-logout";
 
 const MOCK_APPLICATION_PREFERENCES: ApplicationPreferences = {
-  locale: "zh_CN",
-  save_path: "/srv/downloads",
-  temp_path_enabled: true,
-  temp_path: "/srv/downloads/incomplete",
-  create_subfolder_enabled: false,
-  start_paused_enabled: false,
-  preallocate_all: false,
-  incomplete_files_ext: true,
-  auto_tmm_enabled: false,
-  export_dir: "",
-  export_dir_fin: "",
-  queueing_enabled: true,
-  max_active_downloads: 5,
-  max_active_uploads: 8,
-  max_active_torrents: 12,
-  dont_count_slow_torrents: true,
-  max_ratio_enabled: false,
-  max_ratio: -1,
-  max_seeding_time_enabled: false,
-  max_seeding_time: -1,
-  listen_port: 6881,
-  upnp: true,
-  random_port: false,
-  dl_limit: 0,
-  up_limit: 0,
-  alt_dl_limit: 10240,
-  alt_up_limit: 1024,
-  scheduler_enabled: false,
-  dht: true,
-  pex: true,
-  lsd: true,
-  encryption: 0,
-  anonymous_mode: false,
-  proxy_type: -1,
-  proxy_ip: "",
-  proxy_port: 8080,
-  proxy_auth_enabled: false,
-  proxy_username: "",
-  proxy_password: "",
-  ip_filter_enabled: false,
-  ip_filter_path: "",
-  web_ui_address: "*",
-  web_ui_port: 8080,
-  web_ui_username: "admin",
-  web_ui_password: "",
-  web_ui_csrf_protection_enabled: true,
-  web_ui_clickjacking_protection_enabled: true,
-  web_ui_session_timeout: 3600,
-  alternative_webui_enabled: true,
-  alternative_webui_path: "/webui",
-  use_https: false,
-  rss_processing_enabled: true,
-  rss_refresh_interval: 30,
-  rss_max_articles_per_feed: 50,
-  mail_notification_enabled: false,
-  autorun_enabled: false,
-  autorun_program: "",
-  add_trackers_enabled: false,
-  add_trackers: "",
-  scan_dirs: {},
-  banned_IPs: "",
-  async_io_threads: 10,
+  ...MOCK_SESSION,
+  "seed-ratio-limited": true,
+  "seed-ratio-limit": 2,
+  "idle-seeding-limit-enabled": false,
+  "idle-seeding-limit": 30,
+  "queue-stalled-enabled": true,
+  "queue-stalled-minutes": 30,
+  "sequential-download": false,
+  "script-torrent-added-enabled": false,
+  "script-torrent-added-filename": "",
+  "script-torrent-done-enabled": false,
+  "script-torrent-done-filename": "",
+  "script-torrent-done-seeding-enabled": false,
+  "script-torrent-done-seeding-filename": "",
+  "cache-size-mib": 4,
+  "config-dir": "/config/transmission-daemon",
+  "session-id": "mock-session",
 };
 
-class QBittorrentRPCMock {
+class TransmissionRPCMock {
   private applicationPreferences: ApplicationPreferences = { ...MOCK_APPLICATION_PREFERENCES };
 
   constructor() {
@@ -150,7 +106,7 @@ class QBittorrentRPCMock {
   async setApplicationPreferences(preferences: Partial<ApplicationPreferences>): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 150));
     Object.entries(preferences).forEach(([key, value]) => {
-      if (value !== undefined) this.applicationPreferences[key] = value;
+      if (value !== undefined && isWritablePreference(key)) this.applicationPreferences[key] = value;
     });
   }
 
@@ -212,4 +168,4 @@ class QBittorrentRPCMock {
   }
 }
 
-export const rpc = new QBittorrentRPCMock();
+export const rpc = new TransmissionRPCMock();

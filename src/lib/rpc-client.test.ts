@@ -74,6 +74,33 @@ describe("Transmission RPC 适配层", () => {
     expect(sessionStorage.getItem("transmission_basic_auth")).toBeNull()
   })
 
+  test("提交官方可写会话属性并过滤只读服务器信息", async () => {
+    vi.mocked(fetch).mockResolvedValue(success())
+    const { rpc } = await import("./rpc-client")
+
+    await rpc.setApplicationPreferences({
+      "seed-ratio-limited": true,
+      "seed-ratio-limit": 2,
+      "script-torrent-done-enabled": true,
+      version: "4.1.3",
+      "rpc-version-semver": "18.0.0",
+      "session-id": "server-owned",
+    })
+
+    const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit
+    expect(JSON.parse(request.body as string)).toMatchObject({
+      method: "session-set",
+      arguments: {
+        "seed-ratio-limited": true,
+        "seed-ratio-limit": 2,
+        "script-torrent-done-enabled": true,
+      },
+    })
+    expect(JSON.parse(request.body as string).arguments).not.toHaveProperty("version")
+    expect(JSON.parse(request.body as string).arguments).not.toHaveProperty("rpc-version-semver")
+    expect(JSON.parse(request.body as string).arguments).not.toHaveProperty("session-id")
+  })
+
   test("合并文件与文件状态并转换优先级", async () => {
     vi.mocked(fetch).mockResolvedValue(success({
       torrents: [{

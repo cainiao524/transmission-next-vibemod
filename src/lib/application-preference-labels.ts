@@ -10,13 +10,10 @@ export interface PreferenceOption {
 }
 
 const PREFERENCE_OPTIONS: Record<string, readonly PreferenceOptionTranslation[]> = {
-  encryption: [
-    { value: "preferred", zh: "首选加密（允许明文）", en: "Prefer encryption (allow plaintext)" },
-    { value: "required", zh: "强制加密", en: "Require encryption" },
-    { value: "tolerated", zh: "禁止加密", en: "Disallow encryption" },
-  ],
   "alt-speed-time-day": [
     { value: 127, zh: "每天", en: "Every day" },
+    { value: 62, zh: "工作日", en: "Weekdays" },
+    { value: 65, zh: "周末", en: "Weekends" },
     { value: 1, zh: "周日", en: "Sunday" },
     { value: 2, zh: "周一", en: "Monday" },
     { value: 4, zh: "周二", en: "Tuesday" },
@@ -26,6 +23,18 @@ const PREFERENCE_OPTIONS: Record<string, readonly PreferenceOptionTranslation[]>
     { value: 64, zh: "周六", en: "Saturday" },
   ],
 }
+
+const LEGACY_ENCRYPTION_OPTIONS: readonly PreferenceOptionTranslation[] = [
+  { value: "preferred", zh: "首选加密（允许明文）", en: "Prefer encryption (allow plaintext)" },
+  { value: "tolerated", zh: "允许加密", en: "Allow encryption" },
+  { value: "required", zh: "强制加密", en: "Require encryption" },
+]
+
+const CURRENT_ENCRYPTION_OPTIONS: readonly PreferenceOptionTranslation[] = [
+  { value: "preferred", zh: "首选加密（允许明文）", en: "Prefer encryption (allow plaintext)" },
+  { value: "allowed", zh: "允许加密", en: "Allow encryption" },
+  { value: "required", zh: "强制加密", en: "Require encryption" },
+]
 
 const ZH_PREFERENCE_LABELS: Record<string, string> = {
   "start-added-torrents": "添加种子后自动开始",
@@ -38,6 +47,13 @@ const ZH_PREFERENCE_LABELS: Record<string, string> = {
   "download-queue-size": "最大同时下载数",
   "seed-queue-enabled": "启用做种队列",
   "seed-queue-size": "最大同时做种数",
+  "seed-ratio-limited": "启用全局分享率限制",
+  "seed-ratio-limit": "全局分享率限制",
+  "idle-seeding-limit-enabled": "启用闲置做种限制",
+  "idle-seeding-limit": "闲置做种限制（分钟）",
+  "queue-stalled-enabled": "启用停滞检测",
+  "queue-stalled-minutes": "停滞判定时间（分钟）",
+  "sequential-download": "默认顺序下载",
   "speed-limit-down": "下载速度限制 (KB/s)",
   "speed-limit-down-enabled": "启用下载速度限制",
   "speed-limit-up": "上传速度限制 (KB/s)",
@@ -62,13 +78,23 @@ const ZH_PREFERENCE_LABELS: Record<string, string> = {
   "pex-enabled": "启用 PEX（对等交换）",
   "lpd-enabled": "启用本地对等发现 (LPD)",
   "utp-enabled": "启用 µTP",
+  "tcp-enabled": "启用 TCP（已弃用）",
+  "preferred-transports": "首选传输协议",
+  "default-trackers": "默认公共 Tracker",
   "blocklist-enabled": "启用 IP 黑名单",
   "blocklist-url": "IP 黑名单地址",
   "script-torrent-done-enabled": "种子完成时运行脚本",
   "script-torrent-done-filename": "完成时执行的脚本路径",
+  "script-torrent-added-enabled": "添加种子后运行脚本",
+  "script-torrent-added-filename": "添加种子后执行的脚本路径",
+  "script-torrent-done-seeding-enabled": "完成做种后运行脚本",
+  "script-torrent-done-seeding-filename": "完成做种后执行的脚本路径",
   "cache-size-mb": "磁盘缓存大小 (MB)",
-  "queue-stalled-enabled": "启用停滞检测",
-  "queue-stalled-minutes": "停滞判定时间（分钟）",
+  "cache-size-mib": "磁盘缓存大小 (MiB)",
+  "anti-brute-force-enabled": "启用 RPC 防暴力破解",
+  reqq: "单个用户最大待处理分片请求数",
+  "config-dir": "配置目录",
+  "session-id": "当前 RPC 会话标识",
   "rpc-version": "RPC 版本",
   "rpc-version-minimum": "最低 RPC 版本",
   version: "Transmission 版本",
@@ -86,6 +112,13 @@ const EN_PREFERENCE_LABELS: Record<string, string> = {
   "download-queue-size": "Maximum active downloads",
   "seed-queue-enabled": "Enable seed queue",
   "seed-queue-size": "Maximum active seeds",
+  "seed-ratio-limited": "Enable global seed ratio limit",
+  "seed-ratio-limit": "Global seed ratio limit",
+  "idle-seeding-limit-enabled": "Enable idle seeding limit",
+  "idle-seeding-limit": "Idle seeding limit (minutes)",
+  "queue-stalled-enabled": "Enable stalled detection",
+  "queue-stalled-minutes": "Stalled threshold (minutes)",
+  "sequential-download": "Sequential download by default",
   "speed-limit-down": "Download speed limit (KB/s)",
   "speed-limit-down-enabled": "Enable download speed limit",
   "speed-limit-up": "Upload speed limit (KB/s)",
@@ -110,13 +143,23 @@ const EN_PREFERENCE_LABELS: Record<string, string> = {
   "pex-enabled": "Enable PEX (peer exchange)",
   "lpd-enabled": "Enable local peer discovery (LPD)",
   "utp-enabled": "Enable µTP",
+  "tcp-enabled": "Enable TCP (deprecated)",
+  "preferred-transports": "Preferred transports",
+  "default-trackers": "Default public trackers",
   "blocklist-enabled": "Enable IP blocklist",
   "blocklist-url": "IP blocklist URL",
   "script-torrent-done-enabled": "Run script when torrent completes",
   "script-torrent-done-filename": "Script path to run on completion",
+  "script-torrent-added-enabled": "Run script when torrent is added",
+  "script-torrent-added-filename": "Script path to run after adding",
+  "script-torrent-done-seeding-enabled": "Run script when seeding completes",
+  "script-torrent-done-seeding-filename": "Script path to run after seeding",
   "cache-size-mb": "Disk cache size (MB)",
-  "queue-stalled-enabled": "Enable stalled detection",
-  "queue-stalled-minutes": "Stalled threshold (minutes)",
+  "cache-size-mib": "Disk cache size (MiB)",
+  "anti-brute-force-enabled": "Enable RPC brute-force protection",
+  reqq: "Maximum outstanding block requests per peer",
+  "config-dir": "Configuration directory",
+  "session-id": "Current RPC session ID",
   "rpc-version": "RPC version",
   "rpc-version-minimum": "Minimum RPC version",
   version: "Transmission version",
@@ -124,14 +167,20 @@ const EN_PREFERENCE_LABELS: Record<string, string> = {
 }
 export function getPreferenceLabel(key: string, locale: "en" | "zh"): string {
   const table = locale === "zh" ? ZH_PREFERENCE_LABELS : EN_PREFERENCE_LABELS
-  return table[key] ?? key
+  const canonicalKey = key.replaceAll("_", "-")
+  return table[canonicalKey] ?? canonicalKey
 }
 
 export function getPreferenceOptions(
   key: string,
   locale: "en" | "zh",
+  currentValue?: string | number,
 ): readonly PreferenceOption[] | undefined {
-  return PREFERENCE_OPTIONS[key]?.map((option) => ({
+  const canonicalKey = key.replaceAll("_", "-")
+  const options = canonicalKey === "encryption"
+    ? currentValue === "allowed" ? CURRENT_ENCRYPTION_OPTIONS : LEGACY_ENCRYPTION_OPTIONS
+    : PREFERENCE_OPTIONS[canonicalKey]
+  return options?.map((option) => ({
     value: option.value,
     label: locale === "zh" ? option.zh : option.en,
   }))
