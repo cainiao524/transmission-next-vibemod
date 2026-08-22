@@ -499,7 +499,7 @@ export function TorrentListView({
                 actionsColumnPinned={actionsColumnPinned}
                 density={density}
                 rowAnimationKey={rowAnimationKey}
-                animateEntrance={animateRows}
+                animateEntrance={animateRows && index < 12}
                 onToggleSelect={onToggleSelect}
                 onSingleAction={onSingleAction}
                 onOpenEdit={openEdit}
