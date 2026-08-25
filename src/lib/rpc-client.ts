@@ -367,6 +367,7 @@ class TransmissionRPC {
     if (args["download-dir"]) addArgs["download-dir"] = args["download-dir"]
     if (args.paused !== undefined) addArgs.paused = args.paused
     if (args.tags?.length) addArgs.labels = args.tags
+    if (args["files-unwanted"] !== undefined) addArgs["files-unwanted"] = args["files-unwanted"]
     const result = await this.request<TorrentAddResponse>("torrent-add", addArgs)
     const added = result["torrent-added"] ?? result["torrent-duplicate"]
     const id = added?.hashString || (added?.id ? String(added.id) : undefined)

@@ -149,6 +149,30 @@ describe("Transmission RPC 适配层", () => {
     })
   })
 
+  test("添加种子时直接提交未选择的文件编号", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(success({ "torrent-added": { id: 9, hashString: "abc" } }))
+      .mockResolvedValueOnce(success())
+    const { rpc } = await import("./rpc-client")
+
+    await rpc.addTorrent({
+      metainfo: "encoded-torrent",
+      torrentId: "unused-by-transmission",
+      "files-unwanted": [1, 3],
+      paused: false,
+    })
+
+    const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit
+    expect(JSON.parse(request.body as string)).toMatchObject({
+      method: "torrent-add",
+      arguments: {
+        metainfo: "encoded-torrent",
+        paused: false,
+        "files-unwanted": [1, 3],
+      },
+    })
+  })
+
   test("队列移动调用 Transmission 对应方法", async () => {
     vi.mocked(fetch).mockResolvedValue(success())
     const { rpc } = await import("./rpc-client")
