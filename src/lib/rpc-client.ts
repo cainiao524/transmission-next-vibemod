@@ -215,6 +215,10 @@ function mapTorrent(raw: JsonRecord): Torrent {
 }
 
 class TransmissionRPC {
+  private requestSignal?: AbortSignal
+  withSignal(signal: AbortSignal): TransmissionRPC {
+    return Object.assign(Object.create(this) as TransmissionRPC, { requestSignal: signal })
+  }
   private baseUrl = import.meta.env.VITE_TRANSMISSION_RPC_URL || "/transmission/rpc"
   private sessionId: string | null = null
   private authHeader: string | null = null
@@ -237,6 +241,7 @@ class TransmissionRPC {
       method: "POST",
       headers,
       credentials: "same-origin",
+      signal: this.requestSignal ? AbortSignal.any([this.requestSignal, AbortSignal.timeout(10000)]) : undefined,
       body: JSON.stringify({ method, arguments: args, tag: Math.floor(Math.random() * 100000) }),
     })
     if (response.status === 409 && retry) {
@@ -352,7 +357,8 @@ class TransmissionRPC {
     return {}
   }
 
-  async getStats(): Promise<SessionStats> {
+  async getStats(snapshot?: Torrent[]): Promise<SessionStats> {
+    void snapshot
     return this.request<SessionStats>("session-stats")
   }
 

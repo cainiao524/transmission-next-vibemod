@@ -1,6 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useAppSettings } from "@/lib/app-settings-context"
+import { useListMotion } from "@/hooks/use-list-motion"
 import { useWindowVirtualizer } from "@tanstack/react-virtual"
 import { Link, useLocation } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardAction } from "@/components/ui/card"
@@ -40,6 +42,8 @@ export function TorrentGridView({
   const closeEdit = useCallback(() => setEditingTorrent(null), [])
   const [columnCount, setColumnCount] = useState(() => getGridColumnCount())
   const gridRef = useRef<HTMLDivElement>(null)
+  const { animateTorrentSorting } = useAppSettings()
+  useListMotion(gridRef, animateTorrentSorting)
   const [scrollMargin, setScrollMargin] = useState(0)
   const torrentRows = useMemo(() => {
     const rows: Array<Array<{ torrent: Torrent; index: number }>> = []
@@ -117,6 +121,7 @@ export function TorrentGridView({
         const { progressRatio, completedSelected, selectedSize, totalSize, selectionRatio, isPartialDownload } = getTorrentProgressMetrics(torrent)
         return (
         <Card
+                  data-motion-id={torrent.id}
           key={torrent.id}
           data-grid-card
           className={cn(
