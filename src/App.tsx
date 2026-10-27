@@ -3,6 +3,7 @@ import { HashRouter, useLocation } from "react-router-dom"
 import { Layout } from "@/components/layout"
 import { TorrentView } from "@/components/torrents/torrent-view"
 import { AuthGate } from "@/components/auth-gate"
+import { ThemeProvider } from "@/components/theme-provider"
 import { I18nProvider } from "@/lib/i18n-context"
 
 const TorrentDetailsPage = lazy(() => import("@/app/torrents/detail/page"))
@@ -19,6 +20,7 @@ const TORRENT_ROUTE_CONFIGS: Record<string, TorrentRouteConfig> = {
   "/downloading": { statusFilter: "downloading", showStats: false },
   "/paused": { statusFilter: "Paused", showStats: false },
   "/seeding": { statusFilter: "Seeding", showStats: false },
+  "/errors": { statusFilter: "error", showStats: false },
 }
 
 function AppRoutes() {
@@ -31,7 +33,6 @@ function AppRoutes() {
     : TORRENT_ROUTE_CONFIGS["/"]
   const listScrollPosition = useRef(0)
   const wasDetailRoute = useRef(false)
-
 
   useEffect(() => {
     if (isDetailRoute) return
@@ -77,13 +78,15 @@ function AppRoutes() {
 function App() {
   return (
     <HashRouter>
-      <I18nProvider>
-        <AuthGate>
-          <Layout>
-            <AppRoutes />
-          </Layout>
-        </AuthGate>
-      </I18nProvider>
+      <ThemeProvider>
+        <I18nProvider>
+          <AuthGate>
+            <Layout>
+              <AppRoutes />
+            </Layout>
+          </AuthGate>
+        </I18nProvider>
+      </ThemeProvider>
     </HashRouter>
   )
 }

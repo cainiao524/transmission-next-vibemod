@@ -37,7 +37,7 @@ export function TorrentPieceMap({ states, pieceSize, totalSize, loading = false 
       </div>
 
       {loading && !states.length ? (
-        <div className="h-20 animate-pulse rounded-xl bg-muted/40" />
+        <div className="skeleton-gradient h-20 rounded-xl bg-muted/40" />
       ) : states.length ? (
         <>
           <div className="grid grid-cols-[repeat(32,minmax(0,1fr))] gap-1 md:grid-cols-[repeat(64,minmax(0,1fr))]">

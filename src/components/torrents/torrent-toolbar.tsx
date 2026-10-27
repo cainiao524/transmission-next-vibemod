@@ -25,8 +25,8 @@ import {
   GripVertical,
   EyeOff,
   RotateCcw,
-  Pin,
   Keyboard,
+  Pin,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -39,6 +39,7 @@ import {
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
 import { AddTorrentDialog } from "@/components/add-torrent-dialog"
+import { BackendToolbarTools } from "@backend/toolbar-tools"
 import { FilterPanel } from "@/components/torrents/filter-panel"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/lib/i18n-context"
@@ -183,7 +184,7 @@ export function TorrentToolbar({
             variant="ghost"
             size="icon"
             className={cn(
-              "h-10 w-10 rounded-lg md:h-8 md:w-8",
+              "h-10 w-10 rounded-lg transition-all duration-200 md:h-8 md:w-8",
               viewMode === "list"
                 ? "bg-background shadow-sm text-primary"
                 : "text-muted-foreground hover:bg-muted"
@@ -197,7 +198,7 @@ export function TorrentToolbar({
             variant="ghost"
             size="icon"
             className={cn(
-              "h-10 w-10 rounded-lg md:h-8 md:w-8",
+              "h-10 w-10 rounded-lg transition-all duration-200 md:h-8 md:w-8",
               viewMode === "grid"
                 ? "bg-background shadow-sm text-primary"
                 : "text-muted-foreground hover:bg-muted"
@@ -225,7 +226,7 @@ export function TorrentToolbar({
         <div className="flex items-center bg-muted/60 p-1 rounded-xl shrink-0">
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-lg text-muted-foreground hover:bg-muted md:h-8 md:w-8" aria-label={t('common.display_columns', '显示列')}>
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-lg transition-all duration-200 text-muted-foreground hover:bg-muted md:h-8 md:w-8" aria-label={t('common.display_columns', '显示列')}>
                 <Columns className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -251,7 +252,7 @@ export function TorrentToolbar({
                 onSelect={(event) => event.preventDefault()}
               >
                 <Pin className="mr-2 h-4 w-4 text-primary/70" />
-                <span className="text-sm font-medium">{t('common.pin_actions_column', '固定操作列')}</span>
+                <span className="text-sm font-medium">{t('common.pin_actions_column', 'Pin actions column')}</span>
               </DropdownMenuCheckboxItem>
               <DropdownMenuSeparator className="mx-1 my-1 bg-muted/50" />
               <div className="px-2 pb-1">
@@ -308,7 +309,7 @@ export function TorrentToolbar({
         <div className="flex items-center bg-muted/60 p-1 rounded-xl shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-10 min-w-10 px-3 md:h-8 md:px-3.5 rounded-lg font-medium bg-background/60 hover:bg-background text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5 border-none" aria-label={t('common.tools')}>
+              <Button variant="ghost" className="h-10 min-w-10 px-3 md:h-8 md:px-3.5 rounded-lg font-medium bg-background/60 hover:bg-background hover:shadow-sm transition-all text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5 border-none" aria-label={t('common.tools')}>
                 <Wrench className="h-3.5 w-3.5" />
                 <span className="hidden md:inline">{t('common.tools')}</span>
                 <ChevronDown className="h-3 w-3 opacity-50 hidden md:inline" />
@@ -330,6 +331,7 @@ export function TorrentToolbar({
                 <span className="text-sm font-medium whitespace-nowrap">{t('common.batch_move_directory')}</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <BackendToolbarTools />
               <DropdownMenuItem
                 className="rounded-xl py-2.5 px-3 focus:bg-muted cursor-pointer transition-colors"
                 onClick={onShortcutsOpen}
@@ -353,7 +355,7 @@ export function TorrentToolbar({
         <div className="flex items-center bg-muted/60 p-1 rounded-xl gap-1 shrink-0">
           <Button
             variant="ghost"
-            className="h-10 min-w-10 px-3 md:h-8 md:px-3.5 rounded-lg font-medium bg-background/60 hover:bg-background text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5"
+            className="h-10 min-w-10 px-3 md:h-8 md:px-3.5 rounded-lg font-medium bg-background/60 hover:bg-background hover:shadow-sm transition-all text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5"
             onClick={() => onGlobalAction("start")}
             aria-label={t('common.resume_all')}
           >
@@ -362,7 +364,7 @@ export function TorrentToolbar({
           </Button>
           <Button
             variant="ghost"
-            className="h-10 min-w-10 px-3 md:h-8 md:px-3.5 rounded-lg font-medium bg-background/60 hover:bg-background text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5"
+            className="h-10 min-w-10 px-3 md:h-8 md:px-3.5 rounded-lg font-medium bg-background/60 hover:bg-background hover:shadow-sm transition-all text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5"
             onClick={() => onGlobalAction("stop")}
             aria-label={t('common.pause_all')}
           >

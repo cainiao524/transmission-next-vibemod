@@ -13,7 +13,9 @@ const PROGRESS_COLORS: Record<ProgressTone, { bar: string; stroke: string }> = {
 }
 
 function getTorrentProgressTone(torrent: Pick<Torrent, "status" | "error" | "errorString">): ProgressTone {
-  if (torrent.error > 0 || torrent.errorString) return "error"
+  if (torrent.error > 0 || torrent.errorString) {
+    return "error"
+  }
 
   switch (torrent.status) {
     case TorrentStatus.DOWNLOAD:

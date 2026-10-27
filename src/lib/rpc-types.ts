@@ -1,8 +1,8 @@
 /**
- * 界面与 Transmission RPC 适配层共用的领域类型。
+ * UI domain types shared by every backend adapter (see backends/*).
  *
  * The property names intentionally stay stable so the view layer remains
- * 这些类型与 Transmission 的原始传输格式解耦。
+ * independent from each client's wire format.
  */
 
 export enum TorrentStatus {
@@ -20,8 +20,8 @@ export interface Torrent {
   name: string
   status: TorrentStatus
   hashString: string
-  totalSize: number
   size: number
+  totalSize: number
   percentDone: number
   rateDownload: number
   rateUpload: number
@@ -138,6 +138,27 @@ export interface TorrentAddResponse {
   failure_count?: number
   pending_count?: number
   added_torrent_ids?: string[]
+}
+
+export interface TorrentCreatorArgs {
+  sourcePath: string
+  format: "v1" | "v2" | "hybrid"
+  pieceSize: number
+  private: boolean
+  startSeeding: boolean
+  trackers?: string
+  urlSeeds?: string
+  comment?: string
+  source?: string
+}
+
+export interface TorrentCreatorTask {
+  taskID: string
+  sourcePath: string
+  status: "Queued" | "Running" | "Finished" | "Failed"
+  progress?: number
+  errorMessage?: string
+  pieceSize?: number
 }
 
 export interface TorrentSetArgs {

@@ -6,17 +6,22 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { rpc } from "@/lib/rpc-client"
+import { rpc } from "@backend/rpc-client"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/lib/i18n-context"
 import { DEFAULT_SIDEBAR_ITEMS, useAppSettings, type SidebarItemId } from "@/lib/app-settings-context"
 import type { ApplicationPreferences } from "@/lib/rpc-types"
+import { APP_CONFIG } from "@/lib/config"
+
+// The format name and preferences key stay per-backend so existing backup files keep importing.
+const BACKUP_FORMAT = APP_CONFIG.settingsBackup.format
+const BACKUP_PREFERENCES_KEY = APP_CONFIG.settingsBackup.key
 
 interface SettingsBackup {
-  format: "transmission-next-vibemod-settings"
+  format: string
   version: 1
   createdAt: string
-  transmission: ApplicationPreferences
+  [preferencesKey: string]: unknown
   interface: {
     refreshInterval: number
     autoRefresh: boolean
@@ -44,10 +49,10 @@ export function InterfaceSettingsPanel() {
   const [hasRestorePoint, setHasRestorePoint] = React.useState(() => Boolean(localStorage.getItem("settings_restore_point")))
 
   const createBackup = async (): Promise<SettingsBackup> => ({
-    format: "transmission-next-vibemod-settings",
+    format: BACKUP_FORMAT,
     version: 1,
     createdAt: new Date().toISOString(),
-    transmission: await rpc.getApplicationPreferences(),
+    [BACKUP_PREFERENCES_KEY]: await rpc.getApplicationPreferences(),
     interface: {
       refreshInterval: settings.refreshInterval,
       autoRefresh: settings.autoRefresh,
@@ -59,8 +64,8 @@ export function InterfaceSettingsPanel() {
   })
 
   const applyBackup = async (backup: SettingsBackup) => {
-    if (backup.format !== "transmission-next-vibemod-settings" || backup.version !== 1) throw new Error(t("interface_settings.unsupported_backup"))
-    await rpc.setApplicationPreferences(backup.transmission)
+    if (backup.format !== BACKUP_FORMAT || backup.version !== 1) throw new Error(t("interface_settings.unsupported_backup"))
+    await rpc.setApplicationPreferences(backup[BACKUP_PREFERENCES_KEY] as ApplicationPreferences)
     settings.setRefreshInterval(backup.interface.refreshInterval)
     settings.setAutoRefresh(backup.interface.autoRefresh)
     settings.setSidebarItems(backup.interface.sidebarItems)
@@ -77,7 +82,7 @@ export function InterfaceSettingsPanel() {
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement("a")
       anchor.href = url
-      anchor.download = `transmission-next-vibemod-settings-${new Date().toISOString().slice(0, 10)}.json`
+      anchor.download = `${BACKUP_FORMAT}-${new Date().toISOString().slice(0, 10)}.json`
       anchor.click()
       URL.revokeObjectURL(url)
       toast.success(t("interface_settings.exported"))
@@ -148,7 +153,9 @@ export function InterfaceSettingsPanel() {
             <span><span className="flex items-center gap-2 text-sm font-medium"><AlignJustify className="h-4 w-4 text-violet-500" />{t("interface_settings.density_title")}</span><span className="mt-1 block text-xs text-muted-foreground">{t("interface_settings.density_desc")}</span></span>
             <div className="flex shrink-0 rounded-xl bg-muted/60 p-1">
               {(["comfortable", "compact"] as const).map((density) => (
-                <Button key={density} type="button" variant="ghost" size="sm" className={cn("h-8 rounded-lg px-3 text-xs", settings.torrentListDensity === density && "bg-background text-primary shadow-sm")} onClick={() => settings.setTorrentListDensity(density)}>{t(`interface_settings.density_${density}`)}</Button>
+                <Button key={density} type="button" variant="ghost" size="sm" className={cn("h-8 rounded-lg px-3 text-xs", settings.torrentListDensity === density && "bg-background text-primary shadow-sm")} onClick={() => settings.setTorrentListDensity(density)}>
+                  {t(`interface_settings.density_${density}`)}
+                </Button>
               ))}
             </div>
           </div>
