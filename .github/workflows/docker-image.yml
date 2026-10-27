@@ -3,6 +3,9 @@ name: Build and publish Docker images (transactional)
 on:
   push:
     tags: ["v*"]
+  # auto-release.yml 用 GITHUB_TOKEN 打的标签不会产生 push 事件，由它以 --ref <标签> 调起；
+  # 此时 GITHUB_REF_NAME 即标签名，preflight 的标签格式与 main HEAD 校验照常生效。
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -55,7 +58,7 @@ jobs:
           fi
           # 3) APP_CONFIG.version == vX.Y.Z[-N]-baka⑨
           EXPECTED="v${VERSION}-baka⑨"
-          if ! grep -q "version: \"${EXPECTED}\"" src/lib/config.ts; then
+          if ! grep -q "version: \"${EXPECTED}\"" backends/transmission/config.ts; then
             echo "::error::APP_CONFIG.version != '${EXPECTED}'"
             exit 1
           fi
@@ -75,7 +78,7 @@ jobs:
           # AA11: whole-package DELETE target 只能出现 qb-release-staging / trm-release-staging
           # AA12: production formal package 名不得出现在任何 whole-package DELETE URL。
           # 规则：本 workflow 中 DELETE 请求的 GHCR package URL 若缺少 /versions/ 段（即 whole-package 删除），
-          #       target 必须是 trm-release-staging 或 trm-release-staging。
+          #       target 必须是 qb-release-staging 或 trm-release-staging。
           # 实现：只匹配双引号包裹、恰好结束于 package 根路径的 URL；不会匹配本断言自身或 /versions/ URL。
           PKG_ROOTS=$(grep -oE '"https://api\.github\.com/user/packages/container/[a-z0-9-]+"' .github/workflows/docker-image.yml \
             | sed -E 's#^.*/container/([a-z0-9-]+)"$#\1#' | sort -u || true)

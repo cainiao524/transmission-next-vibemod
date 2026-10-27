@@ -21,7 +21,7 @@ import { useI18n } from "@/lib/i18n-context"
 import { useSearch } from "@/lib/search-context"
 import { APP_CONFIG } from "@/lib/config"
 import { formatDate } from "@/lib/formatters"
-import { rpc } from "@/lib/rpc-client"
+import { rpc } from "@backend/rpc-client"
 
 export function Navbar() {
   const { t, locale } = useI18n()

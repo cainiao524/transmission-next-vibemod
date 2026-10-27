@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 import { useI18n } from "@/lib/i18n-context"
-import { rpc } from "@/lib/rpc-client"
+import { rpc } from "@backend/rpc-client"
 import { type Session } from "@/lib/rpc-types"
 import { useAppSettings } from "@/lib/app-settings-context"
 import { APP_CONFIG } from "@/lib/config"
@@ -172,7 +172,7 @@ export default function SettingsPage() {
   if (loading && !session) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-pulse flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4">
           <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
           <p className="text-muted-foreground font-medium">{t("ui.loading_session")}</p>
         </div>
@@ -291,8 +291,6 @@ export default function SettingsPage() {
                 </Card>
               </div>
             )}
-
-            {activeTab === "all" && <AllPreferencesPanel />}
 
             {activeTab === "transfers" && (
               <div className="space-y-6">
@@ -623,7 +621,7 @@ export default function SettingsPage() {
                          </div>
                          <div className="flex justify-between items-center text-xs md:text-sm">
                             <span className="font-semibold text-muted-foreground tracking-tight">{t('settings.remote.server_software')}</span>
-                            <span className="font-bold tracking-tight">Transmission {session?.version}</span>
+                            <span className="font-bold tracking-tight">{APP_CONFIG.backendName} {session?.version}</span>
                          </div>
                       </div>
                   </CardContent>
@@ -631,6 +629,7 @@ export default function SettingsPage() {
               </div>
             )}
 
+            {activeTab === "all" && <AllPreferencesPanel />}
           </div>
         </div>
       </div>

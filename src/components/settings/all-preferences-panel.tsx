@@ -20,17 +20,18 @@ import {
   getPreferenceDependencyKeys,
   getPreferenceValueType,
   isPreferenceApplicable,
-  isConnectionCriticalPreference,
   isPreferenceDependencyMet,
+  isWritablePreference,
+  isConnectionCriticalPreference,
   isSensitivePreference,
   isStructuredPreference,
-  isWritablePreference,
   PREFERENCE_CATEGORY_ORDER,
   type PreferenceCategory,
-} from "@/lib/application-preferences"
-import { getPreferenceLabel, getPreferenceOptions } from "@/lib/application-preference-labels"
+} from "@backend/application-preferences"
+import { getPreferenceLabel, getPreferenceOptions } from "@backend/application-preference-labels"
 import { useI18n } from "@/lib/i18n-context"
-import { rpc } from "@/lib/rpc-client"
+import { APP_CONFIG } from "@/lib/config"
+import { rpc } from "@backend/rpc-client"
 import type { ApplicationPreferences, ApplicationPreferenceValue } from "@/lib/rpc-types"
 import { cn } from "@/lib/utils"
 
@@ -60,7 +61,7 @@ export function AllPreferencesPanel() {
   const [parseErrors, setParseErrors] = useState<Record<string, string>>({})
   const [query, setQuery] = useState("")
   const [changedOnly, setChangedOnly] = useState(false)
-  const [activeCategory, setActiveCategory] = useState<PreferenceCategory>("torrents")
+  const [activeCategory, setActiveCategory] = useState<PreferenceCategory>(PREFERENCE_CATEGORY_ORDER[0])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -73,7 +74,7 @@ export function AllPreferencesPanel() {
       setStructuredDrafts(createStructuredDrafts(data))
       setParseErrors({})
     } catch (error) {
-      console.error("Failed to fetch Transmission preferences:", error)
+      console.error(`Failed to fetch ${APP_CONFIG.backendName} preferences:`, error)
       toast.error(t("settings.all.load_failed", "无法读取全部偏好设置"))
     } finally {
       setLoading(false)
@@ -173,12 +174,9 @@ export function AllPreferencesPanel() {
       })
       await fetchPreferences()
     } catch (error) {
-      console.error("Failed to save Transmission preferences:", error)
+      console.error(`Failed to save ${APP_CONFIG.backendName} preferences:`, error)
       toast.error(t("settings.all.save_failed", "保存偏好设置失败"), {
-        description: t(
-          "settings.all.save_failed_desc",
-          "连接可能已被 RPC 或网络设置更改中断，请检查 Transmission。",
-        ),
+        description: t("settings.all.save_failed_desc"),
       })
     } finally {
       setSaving(false)
@@ -309,7 +307,7 @@ export function AllPreferencesPanel() {
         <CardContent className="flex min-h-72 items-center justify-center">
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <RefreshCw className="h-4 w-4 animate-spin" />
-            {t("settings.all.loading", "正在读取 Transmission 全部偏好设置…")}
+            {t("settings.all.loading")}
           </div>
         </CardContent>
       </Card>
@@ -324,13 +322,10 @@ export function AllPreferencesPanel() {
             <div>
               <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                 <SlidersHorizontal className="h-5 w-5 text-primary" />
-                {t("settings.all.title", "全部 Transmission 会话设置")}
+                {t("settings.all.title")}
               </CardTitle>
               <CardDescription className="mt-2 max-w-3xl text-xs leading-relaxed md:text-sm">
-                {t(
-                  "settings.all.desc",
-                  "按服务器实际返回值展示所有会话配置项；字段数量会随 Transmission 版本和平台变化。",
-                )}
+                {t("settings.all.desc")}
               </CardDescription>
             </div>
             <Button
@@ -349,10 +344,7 @@ export function AllPreferencesPanel() {
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <p>
-                {t(
-                  "settings.all.warning",
-                  "修改 RPC、网络或认证设置可能立即中断当前连接。保存前请确认仍有其他方式访问 Transmission。",
-                )}
+                {t("settings.all.warning")}
               </p>
             </div>
           </div>
@@ -451,8 +443,8 @@ export function AllPreferencesPanel() {
           {activeEntries.length > 0 ? (
             <CardContent className="divide-y divide-muted/30 p-0">
               {activeEntries.map(([key, value]) => {
-                const writable = isWritablePreference(key)
                 const dependencyKeys = getPreferenceDependencyKeys(key)
+                const writable = isWritablePreference(key)
                 const applicable = isPreferenceApplicable(key, draft)
                 const dependencyLabels = dependencyKeys
                   .filter((dependency) => !isPreferenceDependencyMet(dependency, draft))
@@ -519,7 +511,7 @@ export function AllPreferencesPanel() {
           {hasParseErrors
             ? t("settings.all.fix_json", "请先修复无效的 JSON 字段。")
             : hasCriticalChanges
-              ? t("settings.all.critical_changes", "包含可能中断连接的 RPC 或网络设置。")
+              ? t("settings.all.critical_changes")
               : t("settings.all.pending", "待保存 {{count}} 项更改。")
                   .replace("{{count}}", String(changedKeys.size))}
         </div>

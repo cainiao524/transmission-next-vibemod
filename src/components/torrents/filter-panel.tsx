@@ -57,7 +57,7 @@ export function FilterPanel({
 
   const triggerButton = (
     <Button variant="ghost" size="icon" className={cn(
-      "h-10 w-10 rounded-lg relative md:h-8 md:w-8",
+      "h-10 w-10 rounded-lg transition-all duration-200 relative md:h-8 md:w-8",
       hasActiveFilters ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:bg-muted"
     )} aria-label={t("common.filters", "筛选")}>
       <Filter className="h-4 w-4" />
